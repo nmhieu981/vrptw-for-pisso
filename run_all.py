@@ -16,9 +16,9 @@ from core.problem import VRPTWInstance, find_solomon_instances
 from core.preference import UserPreference
 from algorithm.inssso import iNSSSO
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "csv", "R1")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "csv")
 OUTPUT_EXCEL = os.path.join(os.path.dirname(__file__), "results", "all_results.xlsx")
-TIME_LIMIT = 600  # seconds per instance
+TIME_LIMIT = 100  # seconds per instance
 
 
 def load_preference():

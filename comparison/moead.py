@@ -21,19 +21,23 @@ from algorithm.init_heuristics import greedy_nearest_neighbour
 logger = logging.getLogger(__name__)
 
 
-def _generate_weight_vectors(n: int, m: int = 3) -> np.ndarray:
-    """Generate uniformly distributed weight vectors for *m* objectives."""
-    if m == 3:
-        weights = []
-        for i in range(n):
-            for j in range(n - i):
-                k = n - 1 - i - j
-                weights.append([i / (n - 1), j / (n - 1), k / (n - 1)])
-                if len(weights) >= n:
-                    return np.array(weights[:n])
-        return np.array(weights[:n])
-    # Fallback: random Dirichlet
-    return np.random.dirichlet(np.ones(m), n)
+def _generate_weight_vectors(n: int, m: int = 5) -> np.ndarray:
+    """
+    Generate uniformly distributed weight vectors for m objectives
+    using the Das-Dennis method (simplex lattice) or Dirichlet fallback.
+    """
+    from algorithm.reference_dirs import das_dennis
+    try:
+        p = max(2, round(n ** (1.0 / (m - 1))))
+        dirs = das_dennis(m, p)
+        if len(dirs) >= n:
+            return dirs[:n]
+        while len(dirs) < n:
+            p += 1
+            dirs = das_dennis(m, p)
+        return dirs[:n]
+    except Exception:
+        return np.random.dirichlet(np.ones(m), n)
 
 
 class MOEAD:
@@ -66,7 +70,8 @@ class MOEAD:
         logger.info("MOEA/D starting on %s", self.inst.name)
 
         # Weight vectors & neighbourhood
-        weights = _generate_weight_vectors(self.n_sol, 3)
+        from core.objectives import N_OBJ
+        weights = _generate_weight_vectors(self.n_sol, N_OBJ)
         dists = np.linalg.norm(weights[:, None] - weights[None, :], axis=2)
         neighbourhoods = np.argsort(dists, axis=1)[:, :self.T]
 

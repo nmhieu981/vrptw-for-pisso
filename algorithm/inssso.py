@@ -60,44 +60,75 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════
 #  External Archive with ε-dominance + Preference
 # ═══════════════════════════════════════════════════════════════════
-class ParetoArchive:
+class DualArchive:
     """
-    Bounded external archive using ε-dominance.
-    When preference is set, uses ASF for tie-breaking within ε-boxes.
+    Dual-archive system for balancing convergence and diversity.
+
+    Architecture:
+        A_conv (Convergence archive):
+            - ε-dominance based
+            - Pruned by ASF when preference is set
+            - Maintains solutions close to ROI
+        A_div (Diversity archive):
+            - Pareto-dominance only (no ε-boxing)
+            - Pruned by SDE density to spread across PF
+            - Maintains well-distributed boundary solutions
+
+    Mathematical formulation:
+        1. ε-dominance (A_conv):
+           box(f) = ⌊f_m / (ε + 10^{-15})⌋  ∀m
+           x replaces y in same box iff ASF(x) < ASF(y)
+
+        2. SDE pruning (A_div):
+           When |A_div| > max_size:
+             Remove argmin_i SDE(i)  (most crowded)
+
+        3. Archive injection into population:
+           With prob p_conv → inject from A_conv (intensification)
+           With prob p_div  → inject from A_div  (diversification)
+           where p_conv/p_div adapts based on stagnation count
+
+    This dual mechanism prevents the well-known "convergence-diversity
+    dilemma" in many-objective optimization (Ishibuchi et al., 2017).
     """
 
     def __init__(self, max_size: int = 200, epsilon: float = 0.001,
                  pref: Optional[UserPreference] = None):
         self.max_size = max_size
         self.epsilon = epsilon
-        self.solutions: List[Solution] = []
         self.pref = pref
 
+        # Convergence archive (preference-driven)
+        self.conv_archive: List[Solution] = []
+        # Diversity archive (spread-driven)
+        self.div_archive: List[Solution] = []
+
     def _eps_box(self, obj: np.ndarray) -> np.ndarray:
-        """Map objectives to ε-box indices."""
         return np.floor(obj / (self.epsilon + 1e-15))
 
     def update(self, candidates: List[Solution]) -> None:
-        """Add candidates to archive, removing dominated members."""
+        """Update both archives with new candidates."""
         for sol in candidates:
             if sol.objectives is None:
                 continue
-            self._try_add(sol)
+            self._try_add_conv(sol)
+            self._try_add_div(sol)
 
-        if len(self.solutions) > self.max_size:
-            self._prune()
+        if len(self.conv_archive) > self.max_size:
+            self._prune_conv()
+        if len(self.div_archive) > self.max_size:
+            self._prune_div()
 
-    def _try_add(self, sol: Solution) -> None:
-        """Try to add a solution to the archive."""
+    def _try_add_conv(self, sol: Solution) -> None:
+        """ε-dominance based insertion for convergence archive."""
         obj = np.array(sol.objectives)
         eps_box = self._eps_box(obj)
 
         to_remove = []
-        for i, member in enumerate(self.solutions):
+        for i, member in enumerate(self.conv_archive):
             m_obj = np.array(member.objectives)
             m_box = self._eps_box(m_obj)
 
-            # Same ε-box → keep the one with better ASF (or smaller sum)
             if np.array_equal(eps_box, m_box):
                 if self.pref is not None:
                     if self.pref.asf(obj) < self.pref.asf(m_obj):
@@ -109,41 +140,102 @@ class ParetoArchive:
                         to_remove.append(i)
                     else:
                         return
-            # New solution is dominated
             elif np.all(m_obj <= obj) and np.any(m_obj < obj):
                 return
-            # New solution dominates existing
             elif np.all(obj <= m_obj) and np.any(obj < m_obj):
                 to_remove.append(i)
 
         for i in sorted(to_remove, reverse=True):
-            self.solutions.pop(i)
+            self.conv_archive.pop(i)
+        self.conv_archive.append(sol.clone())
 
-        self.solutions.append(sol.clone())
+    def _try_add_div(self, sol: Solution) -> None:
+        """Pareto-dominance insertion for diversity archive (no ε-boxing)."""
+        obj = np.array(sol.objectives)
 
-    def _prune(self) -> None:
-        """Prune archive: prefer solutions with lower ASF, then crowding."""
-        if len(self.solutions) <= self.max_size:
+        to_remove = []
+        for i, member in enumerate(self.div_archive):
+            m_obj = np.array(member.objectives)
+            if np.all(m_obj <= obj) and np.any(m_obj < obj):
+                return
+            elif np.all(obj <= m_obj) and np.any(obj < m_obj):
+                to_remove.append(i)
+
+        for i in sorted(to_remove, reverse=True):
+            self.div_archive.pop(i)
+        self.div_archive.append(sol.clone())
+
+    def _prune_conv(self) -> None:
+        """Prune convergence archive by ASF (preference) or sum."""
+        if len(self.conv_archive) <= self.max_size:
             return
-
-        objs = np.array([s.objectives for s in self.solutions])
-
+        objs = np.array([s.objectives for s in self.conv_archive])
         if self.pref is not None:
-            # Sort by ASF score, keep top max_size
             asf_vals = self.pref.asf_augmented_batch(objs)
             sorted_idx = np.argsort(asf_vals)[:self.max_size]
         else:
-            indices = list(range(len(self.solutions)))
-            cds = crowding_distance(objs, indices, normalize=True)
-            sorted_idx = np.argsort(-cds)[:self.max_size]
+            sums = objs.sum(axis=1)
+            sorted_idx = np.argsort(sums)[:self.max_size]
+        self.conv_archive = [self.conv_archive[i] for i in sorted_idx]
 
-        self.solutions = [self.solutions[i] for i in sorted_idx]
+    def _prune_div(self) -> None:
+        """Prune diversity archive by removing most crowded (lowest SDE)."""
+        if len(self.div_archive) <= self.max_size:
+            return
+        objs = np.array([s.objectives for s in self.div_archive])
+        from algorithm.crowding import sde_density
+        sde_vals = sde_density(objs)
+        sorted_idx = np.argsort(-sde_vals)[:self.max_size]
+        self.div_archive = [self.div_archive[i] for i in sorted_idx]
 
-    def get_solutions(self) -> List[Solution]:
-        return list(self.solutions)
+    def get_solutions(self, mode: str = "combined") -> List[Solution]:
+        """
+        Get solutions from archive.
+        mode: "conv" | "div" | "combined"
+        Combined returns non-dominated merge of both archives.
+        """
+        if mode == "conv":
+            return list(self.conv_archive)
+        elif mode == "div":
+            return list(self.div_archive)
+        else:
+            all_sols = self.conv_archive + self.div_archive
+            if not all_sols:
+                return []
+            objs = np.array([s.objectives for s in all_sols])
+            fronts = fast_nondominated_sort(objs)
+            if fronts:
+                return [all_sols[i] for i in fronts[0]]
+            return all_sols
+
+    def inject_solution(self, stagnation_count: int = 0) -> Optional[Solution]:
+        """
+        Inject an archive solution.
+        Probability shifts from diversity to convergence as stagnation grows:
+            p_conv = σ(stagnation/5)   (sigmoid)
+        """
+        if not self.conv_archive and not self.div_archive:
+            return None
+
+        p_conv = 1.0 / (1.0 + np.exp(-stagnation_count / 5.0 + 2.0))
+
+        if np.random.random() < p_conv and self.conv_archive:
+            idx = np.random.randint(len(self.conv_archive))
+            return self.conv_archive[idx].clone()
+        elif self.div_archive:
+            idx = np.random.randint(len(self.div_archive))
+            return self.div_archive[idx].clone()
+        elif self.conv_archive:
+            idx = np.random.randint(len(self.conv_archive))
+            return self.conv_archive[idx].clone()
+        return None
 
     def size(self) -> int:
-        return len(self.solutions)
+        return len(self.conv_archive) + len(self.div_archive)
+
+
+# Backward compatibility
+ParetoArchive = DualArchive
 
 
 class iNSSSO:
@@ -350,47 +442,111 @@ class iNSSSO:
             n_vehicles=sol.n_vehicles,
         )
 
-    # ----- SSO update (Eq 2) — vectorised -----------------------------------
-    def update_solution(self, xi: Solution, gbest: Solution) -> Solution:
+    # ----- SSO update (Enhanced Eq 2) — with Lévy flight & DE perturbation ---
+    def update_solution(self, xi: Solution, gbest: Solution,
+                        xr1: Optional[Solution] = None,
+                        xr2: Optional[Solution] = None) -> Solution:
+        """
+        Enhanced SSO update with three exploration mechanisms:
+
+        x_{i,j}^{new} = { gbest_j            if ρ_j ≤ c_g        (exploitation)
+                        { x_{i,j}             if c_g < ρ_j ≤ c_w  (conservation)
+                        { x_{i,j} + L_j       if c_w < ρ_j ≤ c_l  (Lévy flight)
+                        { x_{i,j} + F(r1-r2)  otherwise            (DE mutation)
+
+        Lévy flight step:
+            L_j ~ Lévy(β=1.5) × (gbest_j - x_{i,j})
+            Lévy(β) drawn via Mantegna's algorithm
+
+        DE/rand/1 perturbation:
+            x_{i,j} + F × (x_{r1,j} - x_{r2,j}),  F = 0.5
+
+        This replaces the original random exploration (1% probability)
+        with structured exploration that maintains search direction.
+        """
         nvar = xi.nvar
         rho = np.random.rand(nvar)
-        random_keys = np.random.rand(nvar)
-        new_keys = np.where(
-            rho <= self.cg,
-            gbest.keys,
-            np.where(rho <= self.cw, xi.keys, random_keys),
-        )
+
+        # Standard SSO: copy from gBest
+        new_keys = np.where(rho <= self.cg, gbest.keys, xi.keys)
+
+        # Lévy flight exploration (replaces pure random for ρ > c_w)
+        c_l = self.cw + (1.0 - self.cw) * 0.6  # 60% of exploration band
+        levy_mask = (rho > self.cw) & (rho <= c_l)
+        if np.any(levy_mask):
+            levy_steps = self._levy_flight(nvar, beta=1.5)
+            direction = gbest.keys - xi.keys
+            levy_keys = xi.keys + levy_steps * direction * 0.01
+            new_keys = np.where(levy_mask, levy_keys, new_keys)
+
+        # Differential perturbation (remaining exploration band)
+        de_mask = rho > c_l
+        if np.any(de_mask) and xr1 is not None and xr2 is not None:
+            F = 0.5
+            de_keys = xi.keys + F * (xr1.keys - xr2.keys)
+            new_keys = np.where(de_mask, de_keys, new_keys)
+        else:
+            random_keys = np.random.rand(nvar)
+            new_keys = np.where(de_mask, random_keys, new_keys)
+
+        new_keys = np.clip(new_keys, 0.0, 0.999)
         return Solution(
             keys=new_keys,
             n_customers=xi.n_customers,
             n_vehicles=xi.n_vehicles,
         )
 
-    # ----- polynomial mutation (from NSGA-II) --------------------------------
-    def _polynomial_mutation(self, sol: Solution, eta_m: float = 20.0) -> Solution:
-        """Apply polynomial mutation to random keys for diversity."""
-        keys = sol.keys.copy()
-        for j in range(len(keys)):
-            if np.random.random() < self.mutation_rate:
-                y = keys[j]
-                delta1 = y - 0.0
-                delta2 = 1.0 - y
-                rnd = np.random.random()
-                if rnd < 0.5:
-                    xy = 1.0 - delta1
-                    val = 2.0 * rnd + (1.0 - 2.0 * rnd) * (xy ** (eta_m + 1.0))
-                    deltaq = val ** (1.0 / (eta_m + 1.0)) - 1.0
-                else:
-                    xy = 1.0 - delta2
-                    val = 2.0 * (1.0 - rnd) + 2.0 * (rnd - 0.5) * (xy ** (eta_m + 1.0))
-                    deltaq = 1.0 - val ** (1.0 / (eta_m + 1.0))
-                keys[j] = np.clip(y + deltaq, 0.0, 0.999)
+    @staticmethod
+    def _levy_flight(n: int, beta: float = 1.5) -> np.ndarray:
+        """
+        Generate Lévy flight steps using Mantegna's algorithm.
 
-        return Solution(
-            keys=keys,
-            n_customers=sol.n_customers,
-            n_vehicles=sol.n_vehicles,
-        )
+        σ_u = { Γ(1+β) sin(πβ/2) / [Γ((1+β)/2) β 2^{(β-1)/2}] }^{1/β}
+        u ~ N(0, σ_u²),  v ~ N(0, 1)
+        step = u / |v|^{1/β}
+        """
+        from math import gamma as _gamma
+        sigma_u = (
+            _gamma(1 + beta) * np.sin(np.pi * beta / 2)
+            / (_gamma((1 + beta) / 2) * beta * 2 ** ((beta - 1) / 2))
+        ) ** (1.0 / beta)
+        u = np.random.normal(0, sigma_u, n)
+        v = np.random.normal(0, 1, n)
+        return u / (np.abs(v) ** (1.0 / beta))
+
+    # ----- polynomial mutation (vectorised) ----------------------------------
+    def _polynomial_mutation(self, sol: Solution, eta_m: float = 20.0) -> Solution:
+        """Vectorised polynomial mutation on random keys."""
+        keys = sol.keys.copy()
+        n = len(keys)
+        mask = np.random.random(n) < self.mutation_rate
+        if not np.any(mask):
+            return Solution(keys=keys, n_customers=sol.n_customers,
+                            n_vehicles=sol.n_vehicles)
+
+        y = keys[mask]
+        delta1 = y
+        delta2 = 1.0 - y
+        rnd = np.random.random(len(y))
+
+        low = rnd < 0.5
+        xy_low = 1.0 - delta1[low]
+        val_low = 2.0 * rnd[low] + (1.0 - 2.0 * rnd[low]) * (xy_low ** (eta_m + 1.0))
+        dq_low = val_low ** (1.0 / (eta_m + 1.0)) - 1.0
+
+        high = ~low
+        xy_high = 1.0 - delta2[high]
+        val_high = (2.0 * (1.0 - rnd[high])
+                    + 2.0 * (rnd[high] - 0.5) * (xy_high ** (eta_m + 1.0)))
+        dq_high = 1.0 - val_high ** (1.0 / (eta_m + 1.0))
+
+        deltaq = np.empty(len(y))
+        deltaq[low] = dq_low
+        deltaq[high] = dq_high
+
+        keys[mask] = np.clip(y + deltaq, 0.0, 0.999)
+        return Solution(keys=keys, n_customers=sol.n_customers,
+                        n_vehicles=sol.n_vehicles)
 
     # ----- local search on decoded solution ---------------------------------
     def apply_local_search(self, solution: Solution) -> Solution:
@@ -495,10 +651,8 @@ class iNSSSO:
             offspring: List[Solution] = []
             for i in range(self.n_sol):
                 if np.random.random() < self.n_abs:
-                    # ABS local search (preference-aware)
                     yi = self.abs_search.apply(self.population[i])
                 else:
-                    # gBest selection: ASF-based or SDE-based
                     if self.pref is not None:
                         gb_idx = select_gbest_asf(
                             obj_matrix, self.pref, pf_indices
@@ -507,9 +661,18 @@ class iNSSSO:
                         gb_idx = select_gbest(pf_indices, sde_vals)
 
                     gbest = self.population[gb_idx]
-                    yi = self.update_solution(self.population[i], gbest)
 
-                    # Polynomial mutation — mainly when stagnating
+                    # DE donors: two random distinct individuals
+                    r_indices = np.random.choice(
+                        self.n_sol, size=2, replace=False
+                    )
+                    xr1 = self.population[r_indices[0]]
+                    xr2 = self.population[r_indices[1]]
+
+                    yi = self.update_solution(
+                        self.population[i], gbest, xr1=xr1, xr2=xr2
+                    )
+
                     if self._stagnation_count > 3 and np.random.random() < self.mutation_rate:
                         yi = self._polynomial_mutation(yi)
 
@@ -526,14 +689,12 @@ class iNSSSO:
 
                 offspring.append(yi)
 
-            # Update archive
+            # Update dual archive
             self.archive.update(offspring)
 
-            # Inject archive solution for diversity
-            archive_sols = self.archive.get_solutions()
-            if archive_sols:
-                inject_idx = np.random.randint(len(archive_sols))
-                injected = archive_sols[inject_idx].clone()
+            # Inject from dual archive (adaptive convergence/diversity balance)
+            injected = self.archive.inject_solution(self._stagnation_count)
+            if injected is not None:
                 if injected.objectives is None:
                     injected.decode()
                     self.parser.parse(injected)
@@ -571,4 +732,5 @@ class iNSSSO:
             "generations": generation,
             "runtime": elapsed,
             "convergence": self.convergence,
+            "evaluations": self.evaluator.eval_count,
         }

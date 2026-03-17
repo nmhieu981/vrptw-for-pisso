@@ -100,8 +100,10 @@ class MOPSO:
                 yi.decode(); self.parser.parse(yi)
                 self.evaluator.evaluate(yi)
 
-                # Update personal best
-                if yi.objectives < pbest[i].objectives:
+                # Update personal best via Pareto dominance
+                yi_obj = np.array(yi.objectives)
+                pb_obj = np.array(pbest[i].objectives)
+                if np.all(yi_obj <= pb_obj) and np.any(yi_obj < pb_obj):
                     pbest[i] = yi.clone()
 
                 pop[i] = yi
