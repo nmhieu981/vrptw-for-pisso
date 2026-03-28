@@ -19,6 +19,3 @@ Thumbs.db
 # Logs and databases
 *.log
 *.sqlite3
-
-# Test and Results output
-results/
