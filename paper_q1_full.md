@@ -2,9 +2,9 @@
 
 > **Phiên bản:** 3.0 — Tài liệu tham khảo đầy đủ chuẩn Q1 Journal 2026
 >
-> **Mục đích:** Tài liệu kỹ thuật hoàn chỉnh để viết bài báo Q1 về thuật toán **iNSSSO** (improved Non-dominated Sorting Squirrel Search Optimization) kết hợp preference-based optimization cho bài toán Many-Objective Vehicle Routing Problem with Time Windows (MO-VRPTW) với 5 mục tiêu.
+> **Mục đích:** Tài liệu kỹ thuật hoàn chỉnh để viết bài báo Q1 về thuật toán **iNSSSO** (improved Non-dominated Sorting Simplified Swarm Optimization) kết hợp preference-based optimization cho bài toán Many-Objective Vehicle Routing Problem with Time Windows (MO-VRPTW) với 5 mục tiêu.
 >
-> **Novelty claim:** Hybrid SSO with Lévy–DE exploration, adaptive large neighbourhood search (ALNS) with roulette-wheel operator selection, dual-archive convergence–diversity balancing, and preference-guided many-objective optimisation framework.
+> **Novelty claim:** Hybrid Simplified Swarm Optimization (SSO) with Lévy–DE exploration, adaptive large neighbourhood search (ALNS) with roulette-wheel operator selection, dual-archive convergence–diversity balancing, and preference-guided many-objective optimisation framework.
 
 ---
 
@@ -74,7 +74,7 @@ Dựa trên phân tích tổng quan tài liệu (Section 2), chúng tôi xác đ
 | # | Khoảng trống | Bằng chứng | Giải pháp đề xuất |
 |---|---|---|---|
 | G1 | MaO-VRPTW ($M=5$) chưa được nghiên cứu kỹ | Phần lớn nghiên cứu MO-VRPTW chỉ xét 2-3 mục tiêu [3, 12]; chỉ Chen et al. [4] (2025) xét 6 mục tiêu nhưng dùng decomposition đơn giản | Mô hình 5 mục tiêu toàn diện với phân tích conflict toán học |
-| G2 | SSO chưa được áp dụng cho MO-VRPTW | SSO [13] là metaheuristic mới (2019), chưa có ứng dụng MO-VRP; các cải tiến SSO gần đây [14, 15] chỉ áp dụng cho benchmark functions | Lai ghép SSO + Lévy flight + DE perturbation cho VRPTW |
+| G2 | SSO chưa được áp dụng cho MO-VRPTW | SSO [71] là metaheuristic đơn giản (2009), chưa có ứng dụng MO-VRP; các swarm variants gần đây [13, 14, 15] chỉ áp dụng cho benchmark functions | Lai ghép SSO + Lévy flight + DE perturbation cho VRPTW |
 | G3 | Preference-based MaO cho VRPTW chưa có | Các phương pháp preference-based [10, 11, 16] chỉ áp dụng cho benchmark MaO, chưa cho routing | ASF + R-Dominance + ROI framework cho VRPTW |
 | G4 | Thiếu local search thích ứng tích hợp cho MaO-VRPTW | ALNS cho VRP rất phổ biến [17, 18, 19] nhưng chưa tích hợp vào framework MaO-preference | ALNS với 5 destroy + 4 repair operators, roulette-wheel adaptive |
 | G5 | Archive management cho MaO-VRPTW | Dual-archive gần đây [20, 21] chỉ áp dụng cho benchmark; chưa có cho VRPTW | Dual-archive (convergence + diversity) với preference-aware pruning |
@@ -84,7 +84,7 @@ Dựa trên phân tích tổng quan tài liệu (Section 2), chúng tôi xác đ
 
 1. **Mô hình MO-VRPTW 5 mục tiêu** (Section 3): Xây dựng mô hình toán học hoàn chỉnh với adaptive normalization và phân tích conflict bằng Spearman rank correlation [22], chứng minh 5 mục tiêu thực sự mâu thuẫn trên Solomon benchmarks.
 
-2. **Enhanced SSO với Lévy flight + DE/rand/1** (Section 7): Thay thế random exploration $U(0,1)$ của SSO gốc [13] bằng Lévy flight (heavy-tailed superdiffusion [23, 24, 25]) và DE perturbation (directed search [26, 27]), cải thiện cân bằng exploration-exploitation.
+2. **Enhanced SSO với Lévy flight + DE/rand/1** (Section 7): Thay thế random exploration $U(0,1)$ của SSO gốc [71] bằng Lévy flight (heavy-tailed superdiffusion [23, 24, 25]) và DE perturbation (directed search [26, 27]), cải thiện cân bằng exploration-exploitation.
 
 3. **ALNS framework tích hợp** (Section 8): 5 destroy operators + 4 repair operators + roulette-wheel adaptive scoring theo Ropke & Pisinger [17], cập nhật với insights từ tổng quan ALNS mới nhất của Türkeş et al. [18] (211 bài báo, 57 destroy + 42 repair operators).
 
@@ -142,20 +142,35 @@ Các giải pháp gần đây:
 
 Li et al. [8] (2014) đề xuất SDE thay thế crowding distance, kết hợp thông tin phân bố và convergence. SDE đã được chứng minh hiệu quả hơn CD khi $M \geq 4$ trên nhiều benchmark problems. Gần đây, SDE được tích hợp vào competitive mechanism-based multi-objective DE (CMODE) [44] cho feature selection.
 
-### 2.3 Squirrel Search Optimization (SSO)
+### 2.3 Simplified Swarm Optimization (SSO) và Squirrel Search Algorithm (SSA)
 
-#### 2.3.1 SSO gốc và các cải tiến
+#### 2.3.1 SSO gốc — Simplified Swarm Optimization
 
-SSO được Jain et al. [13] giới thiệu năm 2019, mô phỏng hành vi kiếm ăn và lượn (gliding) của sóc bay. Thuật toán chia quần thể thành 3 nhóm: sóc trên cây hickory (gbest), sóc trên cây sồi (tốt nhì), và sóc trên cây bình thường.
+**Simplified Swarm Optimization (SSO)** được Yeh [71] đề xuất năm 2009. SSO sử dụng update rule 3 nhánh đơn giản: mỗi dimension $j$ được cập nhật bằng cách copy từ gbest (exploitation), giữ nguyên (conservation), hoặc random (exploration) dựa trên ngưỡng xác suất $c_g, c_w$. SSO có ưu điểm đơn giản, dễ triển khai, và tương thích tốt với random-key encoding.
 
-Các cải tiến gần đây:
-- RSSA [45]: SSO cải tiến với reproductive behavior từ Invasive Weed Algorithm, cải thiện exploration.
-- FSSSA [46]: Fuzzy SSO dựa trên wide-area search cho numerical optimization.
-- Raza et al. [14] (2024): So sánh toàn diện các variants SSO với randomization khác nhau (exponential, normal, Rayleigh, uniform, Weibull).
+#### 2.3.2 Squirrel Search Algorithm (SSA) và các Swarm Variants
 
-#### 2.3.2 Khoảng trống SSO cho VRPTW
+**Squirrel Search Algorithm (SSA)** được Jain et al. [13] giới thiệu năm 2019, mô phỏng hành vi kiếm ăn và lượn (gliding) của sóc bay với gliding dynamics. SSA chia quần thể thành 3 nhóm: sóc trên cây hickory (gbest), sóc trên cây sồi (tốt nhì), và sóc trên cây bình thường — sử dụng gliding distance thay vì xác suất cố định.
 
-Mặc dù SSO đã được áp dụng cho nhiều bài toán engineering, **chưa có nghiên cứu nào áp dụng SSO cho multi-objective VRP**, chưa nói đến many-objective VRPTW. Đây là khoảng trống quan trọng mà nghiên cứu này lấp đầy.
+Các cải tiến gần đây cho SSA:
+- RSSA [45]: SSA cải tiến với reproductive behavior từ Invasive Weed Algorithm, cải thiện exploration.
+- FSSSA [46]: Fuzzy SSA dựa trên wide-area search cho numerical optimization.
+- Raza et al. [14] (2024): So sánh toàn diện các variants swarm algorithms (bao gồm SSA) với randomization khác nhau (exponential, normal, Rayleigh, uniform, Weibull).
+
+**Sự khác biệt SSO vs SSA:**
+
+| Thuộc tính | SSO (Yeh, 2009) [71] | SSA (Jain et al., 2019) [13] |
+|---|---|---|
+| **Update rule** | 3 nhánh xác suất ($c_g, c_w$) | Gliding dynamics + seasonal monitoring |
+| **Inspiration** | Swarm intelligence đơn giản | Hành vi sóc bay (flying squirrel) |
+| **Exploration** | Random $U(0,1)$ | Gliding distance + random relocation |
+| **Encoding** | Tương thích continuous trực tiếp | Cần adaptation cho continuous |
+
+**Nghiên cứu này chọn SSO** [71] làm cơ sở vì: (1) tương thích trực tiếp với random-key encoding, (2) update rule đơn giản cho phép tích hợp dễ dàng Lévy flight và DE perturbation vào nhánh exploration.
+
+#### 2.3.3 Khoảng trống SSO cho VRPTW
+
+Mặc dù SSO và SSA đã được áp dụng cho nhiều bài toán engineering, **chưa có nghiên cứu nào áp dụng SSO cho multi-objective VRP**, chưa nói đến many-objective VRPTW. Đây là khoảng trống quan trọng mà nghiên cứu này lấp đầy.
 
 ### 2.4 Lévy Flight trong Metaheuristic
 
@@ -245,7 +260,7 @@ Clarke & Wright [63] (1964) đề xuất savings heuristic kinh điển. Gần �
 |---|---|---|---|
 | MO-VRPTW | [3, 12, 35] | $M \leq 3$, chưa MaO | G1 → C1 |
 | MaO-VRP | [4, 36, 37] | Decomposition đơn giản, chưa preference | G1 → C1, G3 → C5 |
-| SSO | [13, 14, 15, 45] | Chưa áp dụng cho VRP | G2 → C2 |
+| SSO/SSA | [71, 13, 14, 15, 45] | Chưa áp dụng cho VRP | G2 → C2 |
 | Lévy + DE | [24, 25, 26, 48] | Chưa tích hợp vào SSO cho routing | G2 → C2 |
 | ALNS cho VRP | [17, 18, 19, 52] | Chưa tích hợp vào MaO framework | G4 → C3 |
 | Preference MaO | [10, 11, 31, 54] | Chưa áp dụng cho VRPTW | G3 → C5 |
@@ -673,11 +688,17 @@ $\mathbf{g}$ hơi tốt hơn top 10% → aspiration hợp lý, không quá tham 
 
 ## 7. Enhanced SSO với Lévy Flight & DE Perturbation
 
-### 7.1 SSO gốc (Jain et al., 2019) [13]
+### 7.1 Simplified Swarm Optimization (SSO) gốc
 
-$$x_{i,j}^{\text{new}} = \begin{cases} \text{gbest}_j & \text{if } \rho_j \leq c_g \\ x_{i,j} & \text{if } c_g < \rho_j \leq c_w \\ U(0,1) & \text{otherwise} \end{cases} \tag{39}$$
+**Lưu ý thuật ngữ:** Thuật toán cơ sở trong nghiên cứu này là **Simplified Swarm Optimization (SSO)** (Yeh, 2009) [71], **không phải** Squirrel Search Algorithm (SSA) của Jain et al. [13] (2019). SSO sử dụng update rule 3 nhánh xác suất, trong khi SSA dùng gliding dynamics của sóc bay. Tên **iNSSSO** = improved Non-dominated Sorting **Simplified** Swarm Optimization.
 
-**Nhược điểm:** Thành phần random $U(0,1)$ không có hướng — exploration kém hiệu quả, đặc biệt khi $M = 5$ và landscape phức tạp. Điều này đã được Raza et al. [14] xác nhận qua so sánh các variants SSO.
+**SSO update rule (Yeh, 2009) [71]:**
+
+$$x_{i,j}^{\text{new}} = \begin{cases} \text{gbest}_j & \text{if } \rho_j \leq c_g & \text{(exploitation — copy best)} \\ x_{i,j} & \text{if } c_g < \rho_j \leq c_w & \text{(conservation — giữ nguyên)} \\ U(0,1) & \text{otherwise} & \text{(exploration — random)} \end{cases} \tag{39}$$
+
+trong đó $\rho_j \sim U(0,1)$ là random number cho mỗi dimension $j$, $c_g$ (gliding constant) và $c_w$ (walking constant) kiểm soát tỷ lệ exploitation/conservation/exploration.
+
+**Nhược điểm:** Thành phần random $U(0,1)$ không có hướng — exploration kém hiệu quả, đặc biệt khi $M = 5$ và landscape phức tạp. Raza et al. [14] (2024) xác nhận qua so sánh các variants rằng chiến lược randomization ảnh hưởng đáng kể đến hiệu năng.
 
 ### 7.2 Enhanced SSO (Đề xuất)
 
@@ -714,7 +735,7 @@ $$x_{i,j}^{\text{new}} = x_{i,j} + F \cdot (x_{r1,j} - x_{r2,j}), \quad F = 0.5 
 
 ### 7.5 So sánh Original vs Enhanced SSO
 
-| Aspect | Original SSO [13] | Enhanced SSO (đề xuất) |
+| Aspect | Original SSO [71] | Enhanced SSO (đề xuất) |
 |---|---|---|
 | Exploration | Random $U(0,1)$ — không hướng | Lévy: heavy-tailed jumps + DE: directed |
 | Step size | Cố định $[0,1]$ | Lévy: adaptive, heavy-tailed |
@@ -1217,7 +1238,7 @@ Solomon [1] (1987) đề xuất bộ benchmark 56 instances chuẩn cho VRPTW, �
 | # | Thuật toán | Loại | Ranking | Diversity | Local Search | Preference | Ref |
 |---|---|---|---|---|---|---|---|
 | C0 | **iNSSSO** | Swarm+ALNS | NDS+SDE+R-dom | Ref Dir Niching | ALNS (5D+4R) | ASF+ROI | — |
-| C1 | NSSSO | Swarm | NDS+CD | CD | None | None | [13] |
+| C1 | NSSSO | Swarm | NDS+CD | CD | None | None | [71] |
 | C2 | NSGA-II | EA | NDS+CD | CD | None | None | [67] |
 | C3 | NSGA-III | EA | NDS | Ref Dir Niching | None | None | [38] |
 | C4 | MOEA/D | Decomposition | Tchebycheff | Weight vectors | None | None | [68] |
@@ -1992,7 +2013,7 @@ flowchart LR
 
 ## 21. Danh mục Tài liệu Tham khảo
 
-> **Tổng cộng: 70 references.** Phân bổ: 18 foundational (pre-2015), 17 intermediate (2015-2023), **35 recent (2024-2026)**.
+> **Tổng cộng: 71 references.** Phân bổ: 19 foundational (pre-2015), 17 intermediate (2015-2023), **35 recent (2024-2026)**.
 
 ### Foundational and Classic References
 
@@ -2150,11 +2171,13 @@ flowchart LR
 
 [65] X. Li, J. Zhang, and Y. Wang, "Improved Clarke-Wright with knowledge transfer for evolutionary multi-tasking vehicle routing," *Complex & Intelligent Systems*, vol. 11, art. 1920, 2025.
 
-**SSO Variants:**
+**SSO/SSA Variants:**
 
 [14] A. Raza, M. Khan, and S. Ahmed, "Comparative assessment of differently randomized accelerated particle swarm optimization and squirrel search algorithms for selective harmonics elimination problem," *Scientific Reports*, vol. 14, art. 62686, 2024.
 
 [15] Y. Chen and L. Zhang, "A dimensional learning squirrel search algorithm based on roulette strategy," in *Proc. IEEE CEC 2022*, 2022, pp. 1–8.
+
+[71] W. C. Yeh, "A two-stage discrete particle swarm optimization for the problem of multiple multi-level redundancy allocation in series systems," *Expert Systems with Applications*, vol. 36, no. 5, pp. 9192–9200, 2009.
 
 **NSGA-III Theory:**
 
@@ -2240,7 +2263,7 @@ flowchart LR
 |---|---|---|---|
 | 1 | **Novelty rõ ràng** | 6 contributions, mỗi cái có justification toán học | ✓ |
 | 2 | **Toán học đầy đủ** | 87 equations, formal pseudocode (6 algorithms) | ✓ |
-| 3 | **Literature review cập nhật** | 70 references, 35 từ 2024-2026 | ✓ |
+| 3 | **Literature review cập nhật** | 71 references, 35 từ 2024-2026 | ✓ |
 | 4 | **So sánh đủ mạnh** | 7 algorithms (bao gồm NSGA-III — bắt buộc cho MaO) | ✓ |
 | 5 | **Ablation study** | 9 variants chứng minh từng component | ✓ |
 | 6 | **Statistical testing** | Wilcoxon + Friedman + Bonferroni + Effect size | ✓ |
@@ -2271,7 +2294,7 @@ flowchart LR
 | 35-36 | ROI ellipsoid, ROI count | §6.2 |
 | **37** | **R-Dominance definition (3 cases)** | §6.3 |
 | 38 | Auto-calibration of reference point | §6.4 |
-| 39 | Original SSO update | §7.1 |
+| 39 | Original SSO update (Yeh, 2009) [71] | §7.1 |
 | **40** | **Enhanced SSO (Lévy + DE) — CORE NOVELTY** | §7.2 |
 | **41-42** | **Lévy flight (Mantegna)** | §7.3 |
 | **43** | **DE/rand/1 perturbation** | §7.4 |
