@@ -79,7 +79,6 @@ class MOPSO:
             obj = np.array([s.objectives for s in pop])
             ranks, cds = assign_rank_and_crowding(obj)
             pf_idx = [i for i, r in enumerate(ranks) if r == 0]
-            pf_cds = cds[pf_idx]
 
             elapsed = time.time() - start
             pf_obj = obj[pf_idx]
@@ -87,7 +86,7 @@ class MOPSO:
             self.convergence.append((elapsed, proxy))
 
             for i in range(self.n_sol):
-                gb = pop[select_gbest(pf_idx, pf_cds)]
+                gb = pop[select_gbest(pf_idx, cds)]
                 r1, r2 = np.random.rand(nvar), np.random.rand(nvar)
                 velocities[i] = (
                     self.w * velocities[i]

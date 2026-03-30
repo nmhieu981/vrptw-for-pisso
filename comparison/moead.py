@@ -29,12 +29,12 @@ def _generate_weight_vectors(n: int, m: int = 5) -> np.ndarray:
     from algorithm.reference_dirs import das_dennis
     try:
         p = max(2, round(n ** (1.0 / (m - 1))))
-        dirs = das_dennis(m, p)
+        dirs = das_dennis(p, m)
         if len(dirs) >= n:
             return dirs[:n]
         while len(dirs) < n:
             p += 1
-            dirs = das_dennis(m, p)
+            dirs = das_dennis(p, m)
         return dirs[:n]
     except Exception:
         return np.random.dirichlet(np.ones(m), n)
