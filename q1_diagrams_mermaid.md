@@ -76,6 +76,84 @@ Hành trình dữ liệu từ file thô đến vector mục tiêu:
 
 ---
 
+## Sơ đồ khối tổng quan iNSSSO (Draw.io-level, khớp `inssso.py`)
+
+**Nguyên tắc bố cục:** một **chuỗi dọc** (init → **cửa thời gian** → xếp hạng → sinh con → archive → chọn lọc → quay lại cửa); **không** tách ba subgraph rời nhau để tránh mũi tên chéo dài. Điều kiện dừng đặt **ngay đầu vòng lặp** (sau init), đúng tinh thần `while True: if elapsed >= t_run: break`.
+
+### Bản chi tiết (vẫn một luồng, ít giao cắt)
+
+```mermaid
+flowchart TB
+  A0([Bắt đầu])
+  A1["① initialize_population() → P"]
+  A2["② _auto_calibrate_preference() → g (một lần)"]
+  A3["③ DualArchive.update(P)"]
+  A4["④ ref_dirs + preference sẵn có (__init__)"]
+  GATE{"⑤ elapsed ≥ t_run ?"}
+
+  A0 --> A1 --> A2 --> A3 --> A4 --> GATE
+
+  GATE -->|"Có"| Z1["⑥ DualArchive.update(P) cuối"]
+  Z1 --> Z2["⑦ Return archive.get_solutions() / Pareto"]
+  Z2 --> ZE([Kết thúc])
+
+  GATE -->|"Không"| L1["⑧ assign_rank_and_sde(P)<br/>NDS + SDE"]
+  L1 --> L2["⑨ Cập nhật ASF min front-0 + stagnation"]
+  L2 --> L3["⑩ _adapt_parameters()<br/>n_abs, mutation_rate"]
+  L3 --> L4["⑪ offspring ← ∅"]
+
+  L4 --> B0{"⑫ rand < n_abs ?"}
+  B0 -->|"Có"| B1["ALNSearch.apply(P[i])"]
+  B0 -->|"Không"| B2["gbest + Enhanced SSO<br/>(Lévy + DE/rand/1)"]
+  B2 --> MU{"⑬ _stagnation > 3 ∧ rand < μ ?"}
+  MU -->|"Có"| PM["_polynomial_mutation"]
+  MU -->|"Không"| EV["⑭ decode → parse → evaluate Z₁…Z₅"]
+  PM --> EV
+  B1 --> EV
+  EV --> LS["⑮ local search (xác suất theo rank)"]
+  LS --> AD["⑯ offspring ← offspring ∪ {y_i}"]
+  AD --> K0{"⑰ Đủ n_sol ?"}
+  K0 -->|"Chưa"| B0
+  K0 -->|"Rồi"| U1["⑱ archive.update(offspring)"]
+  U1 --> U2["⑲ injected ← inject(stagnation);<br/>nếu có thì offspring += injected;<br/>merged ← P + offspring"]
+  U2 --> U3["⑳ select_best(merged)<br/>NDS + SDE + ref-dir niching → P"]
+  U3 --> GATE
+```
+
+### Bản cực gọn (slide / chú thích hình)
+
+```mermaid
+flowchart TB
+  S([Bắt đầu]) --> I["Init: P · auto-calibrate g · archive(P) · ref_dirs"]
+  I --> G{elapsed ≥ t_run ?}
+  G -->|Có| OUT["Archive cuối → tập Pareto"] --> E([Kết thúc])
+  G -->|Không| R["Rank+SDE · ASF/stagnation · adapt n_abs, μ"]
+  R --> Q["Lặp n_sol: ALNS hoặc SSO → decode → eval → LS → Q"]
+  Q --> A["Archive.update(Q) · inject vào Q · P←select( P∪Q )"]
+  A --> G
+```
+
+### Vì sao bản cũ trông “rối”?
+
+| Vấn đề | Cách xử lý ở bản mới |
+|--------|----------------------|
+| Init nằm trong ô riêng, không nối thẳng vào **đầu** vòng lặp | Chuỗi **A0→…→GATE** liên tục |
+| Cửa thời gian ở **cuối** diagram | **GATE** ngay sau init → reader đọc “vào loop / thoát loop” nhất quán |
+| Hai subgraph vàng + mũi tên **C6 → L0** cắt ngang | Một cột; cạnh nối **U3 → GATE** ngắn, logic “một vòng” |
+| Hai nhánh **merged** trùng lặp | Một khối **U2** gộp inject + merge |
+
+### Ghi chú khớp code
+
+| Khối trong sơ đồ | File / hàm |
+|------------------|-------------|
+| Auto-calibrate `g` một lần | `run()` sau `initialize_population()`, không nằm trong mỗi generation |
+| Điều chỉnh tham số mỗi gen | `_adapt_parameters()` — **khác** với auto-calibrate `g` |
+| Inject | `offspring.append(injected)` rồi mới `merged = population + offspring` |
+| Dừng | `while elapsed >= t_run: break` — theo **thời gian**, không phải số thế hệ |
+| Kết quả | `pareto = archive.get_solutions()` — **tập Pareto**, không phải một “best solution” đơn |
+
+---
+
 ## Diagram 3: iNSSSO Main Loop
 
 ```mermaid
