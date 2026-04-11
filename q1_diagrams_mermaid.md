@@ -76,6 +76,85 @@ Hành trình dữ liệu từ file thô đến vector mục tiêu:
 
 ---
 
+## Sơ đồ khối tổng quan iNSSSO — **bản đầy đủ** (Draw.io + bổ sung “đọc một lần hiểu”)
+
+Bản này **giữ nguyên luồng bạn đã vẽ** (multi-start → calibrate `g` → DualArchive → vòng theo thời gian → rank → adapt → ALNS/SSO → decode 5 mục tiêu → LS → offspring → archive → inject → merge → select có niching), và **thêm**:
+
+- **Khung Input / Output / tiêu đề bài toán** (đủ để người đọc biết scope).
+- **Ghi chú trong ô** cho **A_conv / A_div**, **phân biệt calibrate `g` (1 lần) vs adapt mỗi gen**, **rank chỉ trên P** vs **select trên merged + niching**.
+- **Enhanced SSO** (gbest–ASF, Lévy, DE, đột biến đa thức có điều kiện).
+- **Kết thúc:** archive cuối → **tập Pareto**, không ghi “best solution”.
+
+```mermaid
+flowchart TB
+  subgraph META["Phạm vi thuật toán"]
+    direction TB
+    T0["iNSSSO — MaO-VRPTW · 5 mục tiêu Z₁…Z₅ · preference ROI/ASF/R-dominance"]
+    T1["Input: instance Solomon, n_sol, t_run, UserPreference g,w,δ (optional)"]
+    T2["Output: Pareto gần đúng — DualArchive.get_solutions — không phải một nghiệm đơn"]
+  end
+
+  META --> S0([Bắt đầu])
+
+  subgraph INIT["Khởi tạo — chạy một lần"]
+    I1["Multi-start init → quần thể P"]
+    I2["Auto-calibrate reference point g từ P khởi tạo (một lần)"]
+    I3["DualArchive: update P · A_conv = ε-box + ASF prune · A_div = Pareto + SDE prune"]
+    I4["ref_dirs: Das–Dennis + bias w (__init__)"]
+  end
+
+  S0 --> I1 --> I2 --> I3 --> I4 --> GATE{"elapsed ≥ t_run ? · dừng theo CPU time"}
+
+  GATE -->|"Có"| F1["DualArchive.update P lần cuối"]
+  F1 --> F2["Return archive.get_solutions — PF / fallback rank-0"]
+  F2 --> ENDN([Kết thúc])
+
+  GATE -->|"Không"| R1["assign_rank_and_sde P — NDS + SDE · không niching · phục vụ gbest, stagnation, xác suất LS"]
+  R1 --> R2["Metric: min ASF trên front-0 (hoặc min Z₁ nếu không pref.) → stagnation"]
+  R2 --> R3["Adapt mỗi gen: n_abs (ALNS), mutation_rate μ — khác bước calibrate g"]
+  R3 --> R4["offspring ← ∅ · for i = 0 … n_sol−1"]
+
+  R4 --> D0{"rand < n_abs ?"}
+  D0 -->|"Có"| AL["ALNSearch.apply P[i] — destroy–repair VRPTW"]
+  D0 -->|"Không"| SS["Enhanced SSO: gbest (ASF trên front-0) · Lévy + DE/rand/1 trên random-key"]
+  SS --> DM{"stagnation > 3 ∧ rand < μ ?"}
+  DM -->|"Có"| PM["_polynomial_mutation"]
+  DM -->|"Không"| EV["decode → parse → evaluate Z₁…Z₅ + penalty"]
+  PM --> EV
+  AL --> EV
+  EV --> LS["Local search (xác suất theo rank P[i]): 2-opt, merge route, …"]
+  LS --> OF["offspring ← offspring ∪ y_i"]
+  OF --> MORE{"Đủ n_sol offspring ?"}
+  MORE -->|"Chưa"| D0
+  MORE -->|"Rồi"| AR["DualArchive.update offspring"]
+  AR --> INJ["inject_solution stagnation → nếu có: append vào offspring"]
+  INJ --> MG["merged ← P + offspring"]
+  MG --> SB["select_best merged — NDS + SDE + ref-dir niching → P mới · Niching chỉ ở bước này"]
+  SB --> GATE
+```
+
+### Caption gợi ý cho hình (paper / luận)
+
+*Figure: High-level flow of iNSSSO. Preference reference point g is calibrated once after initialization; each generation adapts ALNS probability and polynomial mutation rate from stagnation and runtime progress. Non-dominated sorting with SDE on the parent population supports offspring operators; environmental selection on the merged pool adds reference-direction niching. The algorithm returns an approximate Pareto set from the dual archive under a wall-clock limit t_run.*
+
+### Năm câu “đọc một lần phải trả lời được”
+
+| # | Câu hỏi | Trả lời ngắn (đối chiếu sơ đồ) |
+|---|--------|--------------------------------|
+| 1 | Tối ưu gì? | MaO-VRPTW, 5 mục tiêu, ràng buộc time window + capacity. |
+| 2 | Hai cách sinh con? | ALNS trên route vs Enhanced SSO trên random-key (+ gbest, Lévy, DE, mutate khi kẹt). |
+| 3 | Preference vào đâu? | g (1 lần), ASF/gbest, A_conv, ref_dirs bias; ROI/R-dominance trong các lớp preference khác nếu mô tả đầy đủ trong văn bản. |
+| 4 | Đa dạng + hội tụ? | Dual archive + inject; chọn lọc SDE + ref-dir niching trên merged. |
+| 5 | Kết quả? | Tập Pareto từ archive, không phải một best đơn. |
+
+### Gợi ý khi chuyển sang Draw.io
+
+- Giữ **một cột dọc** chính; **META** đặt **phía trên** hoặc **cột phụ trái**.
+- Kim cương **elapsed ≥ t_run** đặt **ngay sau init** (đồng bộ Mermaid).
+- Hai hộp chú thích nhỏ (sticky): **(A)** “Rank trên P — không niching”; **(B)** “select_best — có ref-dir niching”.
+
+---
+
 ## Sơ đồ khối tổng quan iNSSSO (Draw.io-level, khớp `inssso.py`)
 
 **Nguyên tắc bố cục:** một **chuỗi dọc** (init → **cửa thời gian** → xếp hạng → sinh con → archive → chọn lọc → quay lại cửa); **không** tách ba subgraph rời nhau để tránh mũi tên chéo dài. Điều kiện dừng đặt **ngay đầu vòng lặp** (sau init), đúng tinh thần `while True: if elapsed >= t_run: break`.

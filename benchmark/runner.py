@@ -16,6 +16,7 @@ import pandas as pd
 
 from core.problem import VRPTWInstance, find_solomon_instances
 from core.solution import Solution
+from core.preference import UserPreference
 from benchmark.metrics import PerformanceMetrics
 from algorithm.inssso import iNSSSO
 from algorithm.nssso import NSSSO
@@ -49,6 +50,7 @@ class ExperimentRunner:
         time_limit: float = 60.0,
         n_sol: int = 100,
         fmt: str = "csv",
+        preference: Optional[UserPreference] = None,
     ):
         self.data_dir = data_dir
         self.results_dir = results_dir
@@ -56,6 +58,7 @@ class ExperimentRunner:
         self.time_limit = time_limit
         self.n_sol = n_sol
         self.fmt = fmt
+        self.preference = preference
         self.metrics = PerformanceMetrics()
 
         os.makedirs(results_dir, exist_ok=True)
@@ -83,6 +86,8 @@ class ExperimentRunner:
                 "n_sol": self.n_sol,
                 "t_run": self.time_limit,
             }
+            if algo_name == "iNSSSO" and self.preference is not None:
+                kwargs["preference"] = self.preference
             # NSSSO: no greedy init, no ABS
             if algo_name == "NSSSO":
                 pass  # defaults

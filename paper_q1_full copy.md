@@ -278,43 +278,35 @@ Clarke & Wright [63] (1964) đề xuất savings heuristic kinh điển. Gần �
 
 ### 3.2 Hàm mục tiêu (5 mục tiêu — đều minimize)
 
-Mô hình đề xuất tối ưu đồng thời năm hàm mục tiêu, tất cả đều ở dạng minimize. Năm mục tiêu này phản ánh các khía cạnh khác nhau của chất lượng phương án vận tải mà người ra quyết định quan tâm trong thực tế. Việc sử dụng năm mục tiêu (thay vì hai hoặc ba như phần lớn nghiên cứu trước) đưa bài toán vào lớp **many-objective optimization** ($M \geq 4$), đòi hỏi cơ chế chọn lọc tinh vi hơn so với Pareto-dominance truyền thống (xem Mục 5).
-
 **Z1 — Số phương tiện sử dụng:**
 
 $$Z_1 = \sum_{k=1}^{K_{\max}} y_k, \quad y_k = \begin{cases} 1 & \text{if } |\tau_k| > 0 \\ 0 & \text{otherwise} \end{cases} \tag{1}$$
-
-Mục tiêu $Z_1$ đếm tổng số xe thực sự được sử dụng trong phương án. Biến nhị phân $y_k$ nhận giá trị 1 khi tuyến $k$ phục vụ ít nhất một khách hàng. Giảm thiểu $Z_1$ có ý nghĩa kinh tế trực tiếp: mỗi phương tiện đưa vào hoạt động phát sinh chi phí cố định (khấu hao, bảo hiểm, lương tài xế), do đó dùng càng ít xe càng tiết kiệm. Trong thực tế logistics, $Z_1$ thường là mục tiêu được ưu tiên hàng đầu vì chi phí cố định chiếm tỷ trọng lớn trong tổng chi phí vận hành đội xe.
 
 **Z2 — Tổng khoảng cách:**
 
 $$Z_2 = \sum_{k=1}^{K} \left( d_{0, \tau_k^1} + \sum_{j=1}^{|\tau_k|-1} d_{\tau_k^j, \tau_k^{j+1}} + d_{\tau_k^{|\tau_k|}, 0} \right) \tag{2}$$
 
-Mục tiêu $Z_2$ tính tổng quãng đường di chuyển của toàn bộ đội xe, bao gồm: đoạn từ depot đến khách hàng đầu tiên ($d_{0, \tau_k^1}$), các đoạn giữa các khách hàng liên tiếp trên tuyến ($d_{\tau_k^j, \tau_k^{j+1}}$), và đoạn từ khách hàng cuối quay về depot ($d_{\tau_k^{|\tau_k|}, 0}$). Đây là mục tiêu kinh điển nhất trong mọi biến thể VRP, phản ánh trực tiếp chi phí biến đổi (nhiên liệu, hao mòn phương tiện, phát thải khí nhà kính). Giảm thiểu $Z_2$ đồng nghĩa với việc thiết kế các tuyến đường ngắn gọn, tránh di chuyển thừa. Tuy nhiên, $Z_2$ thường xung đột với $Z_1$: dùng ít xe hơn buộc mỗi xe phải phục vụ nhiều khách hàng hơn, dẫn đến tuyến đường dài hơn.
-
 **Z3 — Tổng thời gian chờ:**
 
 $$Z_3 = \sum_{k=1}^{K} \sum_{i \in \tau_k} \max(0, e_i - a_i^k) \tag{3}$$
 
-Mục tiêu $Z_3$ đo tổng thời gian mà các xe phải chờ đợi trước cửa sổ thời gian của khách hàng trên toàn bộ phương án. Cụ thể, khi xe $k$ đến khách hàng $i$ tại thời điểm $a_i^k$ nhưng cửa sổ thời gian chưa mở ($a_i^k < e_i$), xe phải chờ một khoảng $e_i - a_i^k$ trước khi được phép phục vụ. Thời gian chờ này gây lãng phí tài nguyên: tài xế và xe bị "trói chân" tại một điểm mà không tạo ra giá trị. Trong thực tế, thời gian chờ kéo dài dẫn đến tăng chi phí nhân công (giờ làm thêm), giảm năng suất sử dụng phương tiện, và có thể ảnh hưởng đến tinh thần làm việc của tài xế. Giảm thiểu $Z_3$ thúc đẩy thuật toán tìm các tuyến đường có lịch trình "ăn khớp" với cửa sổ thời gian của khách hàng. Mục tiêu này thường xung đột với $Z_2$: tuyến ngắn nhất về khoảng cách có thể khiến xe đến quá sớm tại nhiều điểm, làm tăng tổng thời gian chờ.
+trong đó $a_i^k$ là thời điểm xe $k$ đến khách hàng $i$. Waiting time xảy ra khi xe đến sớm hơn cửa sổ thời gian $e_i$.
 
 **Z4 — Cân bằng tải trọng:**
 
 $$Z_4 = L_{\max} - L_{\min}, \quad L_k = \sum_{i \in \tau_k} q_i \tag{4}$$
 
-Mục tiêu $Z_4$ đo mức độ chênh lệch tải trọng giữa tuyến nặng nhất ($L_{\max}$) và tuyến nhẹ nhất ($L_{\min}$) trong phương án. Khi $Z_4 = 0$, tất cả các xe mang tải bằng nhau — trạng thái cân bằng lý tưởng. Trong thực tế vận hành, phân phối tải đều giữa các xe mang lại nhiều lợi ích: giảm hao mòn không đồng đều giữa các phương tiện, đảm bảo công bằng khối lượng công việc giữa các tài xế, và tránh tình trạng một số xe quá tải trong khi số khác gần như chạy không. Mục tiêu này đặc biệt quan trọng trong các doanh nghiệp logistics có đội xe lớn và chính sách quản lý công bằng lao động. Tuy nhiên, $Z_4$ thường xung đột với $Z_1$ và $Z_2$: ép cân bằng tải có thể đòi hỏi thêm xe hoặc tuyến đường dài hơn.
+Tối thiểu hoá chênh lệch tải giữa route nặng nhất và nhẹ nhất → phân phối công việc đều giữa các xe.
 
 **Z5 — Makespan:**
 
 $$Z_5 = \max_{k \in K} \; C_k \tag{5}$$
 
-Mục tiêu $Z_5$ là thời điểm xe cuối cùng quay về depot, hay nói cách khác là tổng thời gian từ khi bắt đầu đến khi toàn bộ hoạt động giao hàng hoàn tất. Giảm thiểu $Z_5$ đảm bảo tất cả các xe hoàn thành nhiệm vụ sớm nhất có thể, rút ngắn "cửa sổ hoạt động" của toàn bộ đội xe. Điều này có ý nghĩa thực tiễn quan trọng: trong các kịch bản giao hàng khẩn cấp (dược phẩm, thực phẩm tươi sống), thời gian hoàn thành toàn bộ là yếu tố quyết định chất lượng dịch vụ. Ngoài ra, giảm makespan cho phép depot "giải phóng" xe sớm hơn cho ca giao hàng tiếp theo. Mục tiêu $Z_5$ xung đột rõ rệt với $Z_4$: cân bằng tải có thể buộc một số xe đi vòng xa hơn, kéo dài thời gian hoàn thành.
+trong đó $C_k$ là thời điểm xe $k$ quay về depot. Tối thiểu makespan → tất cả xe hoàn thành sớm nhất có thể.
 
 **Vector mục tiêu:**
 
 $$\mathbf{f}(\mathbf{x}) = (Z_1(\mathbf{x}), Z_2(\mathbf{x}), Z_3(\mathbf{x}), Z_4(\mathbf{x}), Z_5(\mathbf{x})) \in \mathbb{R}^5 \tag{6}$$
-
-Vector mục tiêu $\mathbf{f}(\mathbf{x})$ ánh xạ mỗi lời giải $\mathbf{x}$ vào không gian mục tiêu năm chiều $\mathbb{R}^5$. Với $M = 5$ mục tiêu, bài toán thuộc lớp **many-objective optimization problem (MaOP)**. Đặc thù của MaOP là tỷ lệ các lời giải không bị trội (non-dominated) trong quần thể tăng nhanh theo $M$, khiến áp lực chọn lọc dựa trên Pareto-dominance suy yếu nghiêm trọng — hiện tượng được gọi là "dominance resistance" [4, 8]. Phân tích xung đột giữa năm mục tiêu này sẽ được trình bày chi tiết tại Mục 3.5 thông qua hệ số Spearman rank correlation.
 
 ### 3.3 Ràng buộc
 
@@ -360,50 +352,34 @@ Ràng buộc (12) yêu cầu mọi xe phải quay về depot trước thời đi
 
 ### 3.4 Xử lý vi phạm bằng Penalty
 
-Trong quá trình tìm kiếm, các toán tử metaheuristic (SSO, Lévy flight, DE) thao tác trên không gian liên tục $[0,1)^d$ và có thể tạo ra những lời giải vi phạm ràng buộc sức chứa (Eq. 7) hoặc cửa sổ thời gian (Eq. 10). Có hai cách tiếp cận phổ biến để xử lý tình huống này:
-
-- **Loại bỏ (rejection):** Lời giải không khả thi bị loại khỏi quần thể ngay lập tức. Cách này đơn giản nhưng gây lãng phí tài nguyên tính toán, đặc biệt trên các instance có miền khả thi hẹp (nhóm C1, R1 của Solomon), nơi phần lớn lời giải ngẫu nhiên đều vi phạm ràng buộc.
-- **Sửa chữa (repair):** Lời giải bị sửa để trở nên khả thi. Tuy nhiên, thiết kế toán tử sửa chữa cho VRPTW đa mục tiêu phức tạp và có thể gây bias trong quá trình tìm kiếm.
-
-Chúng tôi lựa chọn cách tiếp cận thứ ba: **hàm phạt (penalty function)**. Thay vì loại bỏ hay sửa chữa, lời giải không khả thi vẫn được giữ lại trong quần thể nhưng bị "trừng phạt" bằng cách cộng thêm một lượng phạt lớn vào tất cả năm hàm mục tiêu:
+Thay vì loại bỏ infeasible solutions, sử dụng penalty function để duy trì diversity:
 
 $$\tilde{Z}_m = Z_m + P \cdot |\text{unserved}|, \quad P = 10^4, \quad \forall m = 1, \ldots, 5 \tag{13}$$
 
-trong đó $|\text{unserved}|$ là số khách hàng không được phục vụ do vi phạm ràng buộc sức chứa hoặc cửa sổ thời gian. Cụ thể, trong quá trình giải mã (decode), khi xe đang xây dựng tuyến đường gặp một khách hàng mà việc thêm vào sẽ vi phạm sức chứa ($\sum q_i > Q$) hoặc vi phạm cửa sổ thời gian ($b_i^k > l_i$), khách hàng đó bị bỏ qua và đếm vào $|\text{unserved}|$.
-
-Giá trị phạt $P = 10^4$ được chọn đủ lớn so với thang giá trị thông thường của các mục tiêu trên bộ dữ liệu Solomon (ví dụ $Z_2$ thường trong khoảng $[500, 2000]$, $Z_1$ trong $[2, 20]$), đảm bảo rằng bất kỳ lời giải khả thi nào ($|\text{unserved}| = 0$) đều **thống trị** (dominate) mọi lời giải không khả thi ($|\text{unserved}| \geq 1$) trên tất cả năm mục tiêu. Nhờ đó, áp lực chọn lọc tự nhiên đẩy quần thể hướng về miền khả thi mà không cần cơ chế sửa chữa tường minh.
-
-Ưu điểm của cách tiếp cận penalty là ba mặt. Thứ nhất, **duy trì đa dạng** (diversity preservation): các lời giải gần-khả-thi (chỉ vi phạm nhẹ) mang thông tin hữu ích về cấu trúc miền khả thi và có thể được "cứu vãn" qua các toán tử local search (ALNS) ở thế hệ sau. Thứ hai, **đơn giản triển khai**: chỉ cần sửa hàm đánh giá mục tiêu, không cần thiết kế toán tử sửa chữa phức tạp cho từng loại ràng buộc. Thứ ba, **tương thích với cơ chế archive kép** (Mục 7): lời giải không khả thi có thể tạm trú trong archive phụ, góp phần dẫn đường tìm kiếm mà không "ô nhiễm" tập Pareto cuối cùng.
+trong đó $|\text{unserved}|$ là số khách hàng không được phục vụ do vi phạm capacity hoặc time window. Giá trị $P = 10^4$ đủ lớn để đảm bảo feasible solutions luôn được ưu tiên hơn infeasible.
 
 ### 3.5 Phân tích Conflict giữa 5 Mục tiêu
 
-Một câu hỏi quan trọng khi xây dựng mô hình nhiều mục tiêu là: liệu năm mục tiêu được chọn có thực sự xung đột với nhau hay không? Nếu hai mục tiêu hòa hợp (harmonious) — tức cải thiện mục tiêu này tự động cải thiện mục tiêu kia — thì một trong hai là dư thừa và có thể loại bỏ mà không mất thông tin. Ngược lại, nếu các mục tiêu thực sự mâu thuẫn, việc giản lược số mục tiêu sẽ bỏ sót các phương án thỏa hiệp (trade-off) quan trọng. Phần này sử dụng phân tích thống kê để kiểm chứng giả thuyết rằng năm mục tiêu $Z_1, \ldots, Z_5$ xung đột đôi một, qua đó biện minh cho việc giữ nguyên mô hình $M = 5$ mục tiêu.
-
-Để đo lường mức độ xung đột giữa hai mục tiêu $f_i$ và $f_j$, chúng tôi sử dụng **hệ số tương quan hạng Spearman** (Spearman rank correlation) [22], được tính trên tập $n$ lời giải không bị trội trong quần thể:
+Để chứng minh 5 mục tiêu thực sự mâu thuẫn (justification cho mô hình MaO), sử dụng **Spearman rank correlation** [22]:
 
 $$r_s(f_i, f_j) = 1 - \frac{6 \sum_{k=1}^{n} d_k^2}{n(n^2 - 1)} \tag{14}$$
 
-trong đó $d_k = \text{rank}(f_i^{(k)}) - \text{rank}(f_j^{(k)})$ là hiệu hạng của lời giải thứ $k$ trên hai mục tiêu $f_i$ và $f_j$. Hệ số $r_s$ nhận giá trị trong $[-1, 1]$: $r_s = 1$ nghĩa là hai mục tiêu hoàn toàn đồng biến (cải thiện cùng hướng), $r_s = -1$ nghĩa là hoàn toàn nghịch biến (cải thiện mục tiêu này làm xấu mục tiêu kia), và $r_s = 0$ nghĩa là không có mối liên hệ đơn điệu. Lý do chọn tương quan hạng thay vì tương quan Pearson là vì $r_s$ không yêu cầu mối quan hệ tuyến tính giữa hai mục tiêu — phù hợp với bản chất phi tuyến của không gian mục tiêu VRPTW.
-
-Từ $r_s$, chúng tôi tính **conflict metric** theo Purshouse và Fleming [66]:
+**Conflict metric** (Purshouse & Fleming [66]):
 
 $$\mathcal{C}(i,j) = 1 - r_s(f_i, f_j) \tag{15}$$
 
-Ý nghĩa của $\mathcal{C}(i,j)$ được diễn giải như sau:
-
 | $\mathcal{C}(i,j)$ | Ý nghĩa |
 |---|---|
-| $\approx 0$ | **Harmonious** — hai mục tiêu tối ưu cùng hướng, có thể giản lược |
-| $\approx 1$ | **Independent** — hai mục tiêu không liên quan, tối ưu mục tiêu này không ảnh hưởng mục tiêu kia |
-| $\approx 2$ | **Maximally conflicting** — hai mục tiêu mâu thuẫn hoàn toàn, cải thiện mục tiêu này chắc chắn làm xấu mục tiêu kia |
+| $\approx 0$ | Harmonious — tối ưu cùng hướng |
+| $\approx 1$ | Independent — không liên quan |
+| $\approx 2$ | Maximally conflicting — mâu thuẫn hoàn toàn |
 
-**Kỳ vọng và phân tích định tính.** Dựa trên bản chất vật lý của bài toán VRPTW, chúng tôi kỳ vọng phân tích trên bộ Solomon instances sẽ cho thấy hầu hết cặp mục tiêu có $\mathcal{C} > 1$, đặc biệt:
+**Kỳ vọng:** Phân tích trên Solomon instances sẽ cho thấy hầu hết cặp mục tiêu có $\mathcal{C} > 1$, đặc biệt:
+- $\mathcal{C}(Z_1, Z_2) \approx 1.5$: ít xe → mỗi route dài hơn → distance tăng
+- $\mathcal{C}(Z_2, Z_3) > 1$: route ngắn → có thể đến sớm → waiting tăng
+- $\mathcal{C}(Z_4, Z_5) > 1$: balance loads → forced detours → makespan tăng
 
-- $\mathcal{C}(Z_1, Z_2) \approx 1.5$: Giảm số xe ($Z_1$) buộc mỗi xe phải phục vụ nhiều khách hàng hơn, dẫn đến tuyến đường dài hơn, tăng tổng khoảng cách ($Z_2$).
-- $\mathcal{C}(Z_2, Z_3) > 1$: Tuyến đường ngắn nhất ($Z_2$ thấp) có thể khiến xe đến sớm tại nhiều điểm, tăng tổng thời gian chờ ($Z_3$).
-- $\mathcal{C}(Z_4, Z_5) > 1$: Cân bằng tải trọng ($Z_4$ thấp) có thể buộc một số xe phải đi vòng xa hơn để nhận thêm hàng, kéo dài thời gian hoàn thành của xe chậm nhất ($Z_5$).
-
-Kết quả $\mathcal{C} > 1$ cho phần lớn các cặp $(i,j)$ sẽ chứng minh rằng năm mục tiêu thực sự xung đột đôi một, và do đó không thể giản lược mô hình thành hai hoặc ba mục tiêu mà không mất thông tin quan trọng về trade-off. Đây là luận cứ chính cho việc áp dụng true many-objective optimizer thay vì các phương pháp multi-objective truyền thống.
+Kết quả $\mathcal{C} > 1$ cho phần lớn cặp $(i,j)$ chứng minh cần true many-objective optimizer, không thể giản lược thành 2-3 mục tiêu.
 
 ---
 
@@ -755,42 +731,30 @@ Ba cơ chế này hoạt động theo thứ bậc: ASF cung cấp **thang đo**,
 
 ### 6.1 Achievement Scalarizing Function (ASF) [29]
 
-Achievement Scalarizing Function (ASF) là công cụ toán học cốt lõi cho phép chuyển đổi bài toán tối ưu đa mục tiêu thành bài toán đơn mục tiêu có tham số, được đề xuất lần đầu bởi Wierzbicki (1980) [29] trong khuôn khổ lý thuyết reference point. Ý tưởng trung tâm của ASF là: thay vì so sánh hai nghiệm trên từng mục tiêu riêng lẻ (như Pareto dominance), ASF tổng hợp toàn bộ $M$ mục tiêu thành **một giá trị vô hướng duy nhất** đo lường "nghiệm này gần điểm mong muốn của DM đến mức nào". Nhờ đó, mọi cặp nghiệm đều so sánh được — khắc phục triệt để vấn đề dominance resistance trong không gian nhiều mục tiêu.
-
 **ASF cơ bản (Wierzbicki, 1980):**
 
 $$\text{ASF}(\mathbf{x}) = \max_{m=1}^{M} \left\{ w_m \cdot (f_m(\mathbf{x}) - g_m) \right\} \tag{33}$$
 
 trong đó:
-- $\mathbf{g} = (g_1, \ldots, g_M)$ là **reference point** (aspiration level) — vector biểu diễn mức mong muốn của DM trên từng mục tiêu. Ví dụ, $g_1 = 5$ nghĩa là DM mong muốn chỉ dùng 5 xe.
-- $\mathbf{w} = (w_1, \ldots, w_M)$ là **weight vector**, $w_m > 0$, $\sum w_m = 1$ — phản ánh mức độ quan trọng tương đối mà DM gán cho từng mục tiêu. Trọng số $w_m$ lớn đồng nghĩa với việc DM đặc biệt nhạy cảm với sai lệch trên mục tiêu $m$.
-
-ASF lấy giá trị $\max$ trên $M$ chiều, tức là giá trị ASF của một nghiệm được quyết định bởi **chiều tệ nhất** (sau khi đã chuẩn hóa theo trọng số). Cấu trúc minimax này mang ý nghĩa sâu sắc: ASF không cho phép một mục tiêu nào bị "hy sinh" quá mức để đổi lấy mục tiêu khác. Một nghiệm chỉ có ASF thấp khi nó **đồng đều tốt** trên tất cả các chiều quan trọng — phù hợp với tâm lý ra quyết định thực tế, nơi DM hiếm khi chấp nhận một phương án tuyệt vời ở một tiêu chí nhưng thảm hại ở tiêu chí khác.
-
-Về mặt lý thuyết, Wierzbicki [29] đã chứng minh rằng nghiệm tối ưu của $\min_{\mathbf{x}} \text{ASF}(\mathbf{x})$ luôn nằm trên mặt Pareto (weakly Pareto optimal). Tính chất này đảm bảo rằng việc sử dụng ASF không dẫn đến các nghiệm bị trội.
+- $\mathbf{g} = (g_1, \ldots, g_M)$: reference point (aspiration level) của DM
+- $\mathbf{w} = (w_1, \ldots, w_M)$: weight vector, $w_m > 0$, $\sum w_m = 1$
 
 **ASF tăng cường (Augmented):**
 
-Tuy nhiên, ASF cơ bản (Eq. 33) chỉ đảm bảo weak Pareto optimality — nghĩa là nghiệm tối ưu có thể bị cải thiện trên một số mục tiêu mà không làm xấu mục tiêu nào (nhưng không cải thiện được trên tất cả). Để đảm bảo **strong Pareto optimality**, chúng tôi sử dụng phiên bản tăng cường (augmented ASF):
-
 $$\text{ASF}_{\text{aug}}(\mathbf{x}) = \max_{m} \left\{ w_m (f_m - g_m) \right\} + \rho \sum_{m=1}^{M} w_m (f_m - g_m) \tag{34}$$
 
-Số hạng bổ sung $\rho \sum_{m=1}^{M} w_m (f_m - g_m)$ là một lượng phạt nhỏ tỷ lệ với **tổng độ lệch có trọng số** trên tất cả $M$ chiều. Tham số $\rho = 10^{-3}$ được chọn đủ nhỏ để không thay đổi thứ tự xếp hạng khi hai nghiệm có ASF cơ bản khác nhau rõ rệt, nhưng đủ lớn để **phá hòa** (tie-breaking) khi hai nghiệm có cùng giá trị $\max$. Khi đó, nghiệm có tổng sai lệch nhỏ hơn — tức đồng đều gần $\mathbf{g}$ hơn trên mọi chiều — sẽ được ưu tiên. Miemczyk et al. [29] chứng minh rằng với $\rho > 0$, nghiệm tối ưu của $\text{ASF}_{\text{aug}}$ luôn là **properly Pareto optimal**.
+với $\rho = 10^{-3}$ (đủ nhỏ để không ảnh hưởng ordering nhưng đảm bảo Pareto optimality).
 
-**Ví dụ minh hoạ ($M = 3$).** Để làm rõ cơ chế hoạt động của ASF augmented (Eq. 34) — phiên bản được sử dụng trong các bước chọn lọc quan trọng của iNSSSO (R-dominance ranking, tournament, archive pruning) — xét một ví dụ với $M = 3$ mục tiêu. Cho reference point $\mathbf{g} = (10, 10, 10)$, weight vector $\mathbf{w} = (0.5, 0.3, 0.2)$ (DM coi mục tiêu 1 là quan trọng nhất), và $\rho = 10^{-3}$. Xét hai nghiệm:
+**Ví dụ minh hoạ ($M = 3$).** Cho $\mathbf{g} = (10, 10, 10)$ và $\mathbf{w} = (0.5, 0.3, 0.2)$. Xét hai nghiệm:
 
 | Nghiệm | $f_1$ | $f_2$ | $f_3$ |
 |---|---|---|---|
 | A | 12 | 11 | 15 |
 | B | 14 | 10 | 12 |
 
-Hai nghiệm này không so sánh được theo Pareto dominance: A tốt hơn B ở $f_1$ và $f_3$, nhưng B tốt hơn A ở $f_2$. ASF augmented sẽ phá hòa dựa trên preference của DM.
-
-Tính $\text{ASF}_{\text{aug}}$ từng nghiệm theo Eq. 34: $\text{ASF}_{\text{aug}}(\mathbf{x}) = \underbrace{\max_{m} \{ w_m (f_m - g_m) \}}_{\text{phần minimax}} + \underbrace{\rho \sum_{m=1}^{M} w_m (f_m - g_m)}_{\text{phần phá hòa}}$
+Tính ASF từng nghiệm:
 
 *Nghiệm A:*
-
-**Bước 1 — Tính độ lệch có trọng số $w_m(f_m - g_m)$ từng chiều:**
 
 | Chiều | $f_m - g_m$ | $w_m \cdot (f_m - g_m)$ |
 |---|---|---|
@@ -798,17 +762,9 @@ Tính $\text{ASF}_{\text{aug}}$ từng nghiệm theo Eq. 34: $\text{ASF}_{\text{
 | $m=2$ | $11 - 10 = 1$ | $0.3 \times 1 = 0.3$ |
 | $m=3$ | $15 - 10 = 5$ | $0.2 \times 5 = 1.0$ |
 
-**Bước 2 — Phần minimax:** $\max(1.0,\; 0.3,\; 1.0) = 1.0$
-
-**Bước 3 — Phần phá hòa:** $\rho \sum w_m(f_m - g_m) = 10^{-3} \times (1.0 + 0.3 + 1.0) = 10^{-3} \times 2.3 = 0.0023$
-
-**Bước 4 — Tổng hợp:**
-
-$$\text{ASF}_{\text{aug}}(A) = 1.0 + 0.0023 = 1.0023$$
+$$\text{ASF}(A) = \max(1.0,\; 0.3,\; 1.0) = 1.0$$
 
 *Nghiệm B:*
-
-**Bước 1 — Tính độ lệch có trọng số:**
 
 | Chiều | $f_m - g_m$ | $w_m \cdot (f_m - g_m)$ |
 |---|---|---|
@@ -816,73 +772,37 @@ $$\text{ASF}_{\text{aug}}(A) = 1.0 + 0.0023 = 1.0023$$
 | $m=2$ | $10 - 10 = 0$ | $0.3 \times 0 = 0$ |
 | $m=3$ | $12 - 10 = 2$ | $0.2 \times 2 = 0.4$ |
 
-**Bước 2 — Phần minimax:** $\max(2.0,\; 0,\; 0.4) = 2.0$
+$$\text{ASF}(B) = \max(2.0,\; 0,\; 0.4) = 2.0$$
 
-**Bước 3 — Phần phá hòa:** $\rho \sum w_m(f_m - g_m) = 10^{-3} \times (2.0 + 0 + 0.4) = 10^{-3} \times 2.4 = 0.0024$
+**Kết luận:** $\text{ASF}(A) = 1.0 < \text{ASF}(B) = 2.0$ → DM ưa A hơn B. Mặc dù B đạt $f_2$ bằng đúng mong muốn ($f_2 = g_2 = 10$) và $f_3$ tốt hơn A, nhưng $f_1$ của B lệch xa $g_1$ quá nhiều ($w_1 \times 4 = 2.0$) — chiều "tệ nhất" theo trọng số quyết định toàn bộ. Đây chính là đặc trưng minimax của ASF: **không cho phép một chiều nào quá tệ**, ép nghiệm phải **cân bằng** theo trọng số DM.
 
-**Bước 4 — Tổng hợp:**
+Nếu hai nghiệm cùng ASF (ví dụ $\text{ASF} = 1.0$), ASF augmented (Eq. 34) phá hòa bằng tổng $\rho \sum w_m(f_m - g_m)$: nghiệm có tổng độ lệch nhỏ hơn sẽ được ưu tiên.
 
-$$\text{ASF}_{\text{aug}}(B) = 2.0 + 0.0024 = 2.0024$$
-
-**So sánh kết quả:**
-
-| Nghiệm | Phần minimax | Phần phá hòa ($\rho \sum$) | $\text{ASF}_{\text{aug}}$ |
-|---|---|---|---|
-| A | 1.0 | 0.0023 | **1.0023** |
-| B | 2.0 | 0.0024 | 2.0024 |
-
-$\text{ASF}_{\text{aug}}(A) = 1.0023 < \text{ASF}_{\text{aug}}(B) = 2.0024$, do đó DM ưa nghiệm A hơn nghiệm B. Trong trường hợp này, phần minimax đã đủ để phân biệt ($1.0 \neq 2.0$) và phần phá hòa $\rho \sum$ chỉ đóng vai trò thứ yếu (thay đổi chữ số thứ ba sau dấu phẩy). Phân tích chi tiết: mặc dù nghiệm B đạt $f_2$ bằng đúng mong muốn ($f_2 = g_2 = 10$) và $f_3$ tốt hơn A, nhưng $f_1$ của B lệch xa reference point quá nhiều ($w_1 \times 4 = 2.0$). Chiều "tệ nhất" theo trọng số quyết định toàn bộ — đây là đặc trưng minimax: ASF **không cho phép một chiều nào quá tệ**, ép nghiệm phải **cân bằng** theo trọng số DM.
-
-**Khi nào phần phá hòa trở nên quyết định?** Xét thêm nghiệm C có cùng giá trị minimax với A:
-
-| Nghiệm | $f_1$ | $f_2$ | $f_3$ | Phần minimax | $\rho \sum$ | $\text{ASF}_{\text{aug}}$ |
-|---|---|---|---|---|---|---|
-| A | 12 | 11 | 15 | 1.0 | 0.0023 | **1.0023** |
-| C | 12 | 13 | 10 | 1.0 | 0.0019 | **1.0019** |
-
-Cả A và C đều có phần minimax bằng 1.0 ($w_1 \times 2 = 1.0$ cho cả hai). Nếu chỉ dùng ASF cơ bản (Eq. 33), hai nghiệm này **hòa hoàn toàn** — thuật toán không biết chọn ai. Nhưng với ASF augmented, phần phá hòa phân biệt: $\rho \sum$ của C = $10^{-3} \times (1.0 + 0.9 + 0) = 0.0019 < 0.0023$ = $\rho \sum$ của A, nên $\text{ASF}_{\text{aug}}(C) = 1.0019 < 1.0023 = \text{ASF}_{\text{aug}}(A)$ → C được ưu tiên. Nghiệm C có tổng sai lệch nhỏ hơn trên toàn bộ các chiều — tức gần reference point hơn "một cách tổng thể" — và phần augmented phát hiện ra điều này. Đây chính là lý do triển khai iNSSSO sử dụng ASF augmented (Eq. 34) ở các bước chọn lọc quan trọng: R-dominance ranking, tournament selection, và archive pruning — nơi mà tình trạng hòa xảy ra thường xuyên trong không gian $M = 5$ chiều.
-
-**Vai trò ASF trong iNSSSO.** ASF không chỉ là công cụ lý thuyết mà được tích hợp trực tiếp vào nhiều thành phần của thuật toán iNSSSO đề xuất:
+**Vai trò ASF trong iNSSSO:**
 
 | Component | Vai trò của ASF |
 |---|---|
-| gBest selection | Tournament trên ASF: chọn $\text{gbest} = \arg\min \text{ASF}$ — hướng swarm về vùng DM ưa thích |
-| Archive pruning | Trong ε-box, khi có nhiều nghiệm cùng ô, giữ nghiệm có ASF thấp hơn — ưu tiên nghiệm gần preference |
-| Convergence tracking | $\text{Best ASF}(t) = \min_{x \in PF(t)} \text{ASF}(x)$ — đo tiến trình hội tụ về vùng DM quan tâm |
-| Auto-calibration | $g_m = \text{ideal}_m + 0.1 \cdot \max(p_{10,m} - \text{ideal}_m, 0)$ — tự động điều chỉnh reference point theo quần thể hiện tại |
-
-Trong đó, thành phần auto-calibration đáng chú ý: thay vì yêu cầu DM cung cấp reference point chính xác trước khi chạy (điều khó thực hiện trên bài toán mới), thuật toán tự ước lượng $\mathbf{g}$ từ phân vị 10% ($p_{10,m}$) của quần thể hiện tại trên từng mục tiêu. Giá trị $g_m$ được đặt hơi tốt hơn phân vị 10% một khoảng nhỏ (10%), tạo ra một "mục tiêu tham vọng nhưng khả thi" giúp dẫn hướng tìm kiếm mà không gây áp lực quá mức.
+| gBest selection | Tournament trên ASF: chọn $\text{gbest} = \arg\min \text{ASF}$ |
+| Archive pruning | Trong ε-box, giữ solution có ASF thấp hơn |
+| Convergence tracking | $\text{Best ASF}(t) = \min_{x \in PF(t)} \text{ASF}(x)$ |
+| Auto-calibration | $g_m = \text{ideal}_m + 0.1 \cdot \max(p_{10,m} - \text{ideal}_m, 0)$ |
 
 ### 6.2 Region of Interest (ROI) [30]
-
-Trong khi ASF (Mục 6.1) cung cấp **thang đo liên tục** để xếp hạng nghiệm theo preference, ROI (Region of Interest) bổ sung một cơ chế khác: **phân loại nhị phân** — một nghiệm hoặc thuộc vùng DM quan tâm, hoặc không. Sự phân biệt rõ ràng "trong/ngoài" này đóng vai trò then chốt trong R-dominance (Mục 6.3), nơi nghiệm trong ROI được ưu tiên tuyệt đối so với nghiệm ngoài ROI bất kể quan hệ Pareto.
-
-ROI được định nghĩa hình học là một **hyperellipsoid** (siêu ellipsoid) trong không gian mục tiêu $\mathbb{R}^M$, đặt tâm tại reference point $\mathbf{g}$ của DM. Hình dạng ellipsoid (thay vì hypersphere) cho phép "kéo dãn" hoặc "co lại" vùng quan tâm theo từng chiều mục tiêu một cách không đối xứng — phản ánh thực tế rằng mức độ biến thiên (range) của các mục tiêu khác nhau có thể chênh lệch rất lớn (ví dụ $Z_1 \in [2, 20]$ trong khi $Z_2 \in [500, 2000]$).
 
 **Định nghĩa Ellipsoid:**
 
 $$\text{ROI}(\mathbf{x}) = \left\{ \mathbf{x} : \sum_{m=1}^{M} \left( \frac{w_m (f_m(\mathbf{x}) - g_m)}{\delta \cdot (f_m^{\text{nadir}} - f_m^{\text{ideal}})} \right)^2 \leq 1 \right\} \tag{35}$$
 
-Công thức (35) kiểm tra xem nghiệm $\mathbf{x}$ có nằm trong ROI hay không bằng cách tính tổng bình phương các "khoảng cách chuẩn hóa có trọng số" trên $M$ chiều. Cụ thể, trên mỗi chiều $m$:
+với $\delta \in (0, 1]$ là bán kính ROI (mặc định $\delta = 0.2$).
 
-- $f_m(\mathbf{x}) - g_m$ là **độ lệch thô** giữa giá trị mục tiêu của nghiệm và mong muốn của DM. Giá trị dương nghĩa là nghiệm tệ hơn mong muốn trên chiều $m$ (vì tất cả mục tiêu đều minimize).
-- $f_m^{\text{nadir}} - f_m^{\text{ideal}}$ là **biên độ** (range) của mục tiêu $m$, được ước lượng từ quần thể hiện tại. Chia cho biên độ giúp chuẩn hóa các mục tiêu có thang giá trị khác nhau về cùng một đơn vị, tránh tình trạng mục tiêu có range lớn chi phối toàn bộ.
-- $w_m$ là trọng số phản ánh mức quan trọng mà DM gán cho mục tiêu $m$. Trọng số lớn khiến ellipsoid "hẹp" hơn trên chiều đó — nghĩa là DM ít chấp nhận sai lệch trên mục tiêu quan trọng.
-- $\delta \in (0, 1]$ là **tham số bán kính ROI**, điều khiển kích thước tổng thể của ellipsoid. Giá trị mặc định $\delta = 0.2$ nghĩa là mỗi bán trục của ellipsoid bằng 20% biên độ tương ứng (sau khi nhân trọng số).
+**Ý nghĩa hình học:**
+- ROI là **hyperellipsoid** trong objective space, trung tâm tại $\mathbf{g}$
+- Trục chính dọc theo trọng số $\mathbf{w}$
+- Kích thước co lại/mở rộng theo $\delta$: $\delta$ nhỏ → ROI nhỏ → tập trung cao; $\delta$ lớn → ROI lớn → linh hoạt hơn
 
-Nếu tổng bình phương $\sum z_m^2 \leq 1$, nghiệm nằm bên trong (hoặc trên biên) ellipsoid và được phân loại là "thuộc vùng quan tâm".
+**Ví dụ minh hoạ ($M = 3$).** Dùng lại $\mathbf{g} = (10, 10, 10)$, $\mathbf{w} = (0.5, 0.3, 0.2)$, $\delta = 0.2$. Giả sử $\text{ideal} = (4, 5, 8)$ và $\text{nadir} = (15, 20, 25)$. Xét nghiệm A $(12, 11, 15)$ và B $(14, 10, 12)$:
 
-**Ý nghĩa hình học và vai trò của tham số $\delta$.** ROI là một hyperellipsoid trong không gian mục tiêu $\mathbb{R}^M$ với các đặc điểm sau:
-
-- **Tâm** đặt tại reference point $\mathbf{g}$ — nơi DM mong muốn nghiệm hội tụ về.
-- **Các bán trục** có độ dài $\delta \cdot (f_m^{\text{nadir}} - f_m^{\text{ideal}}) / w_m$ trên chiều $m$. Chiều có trọng số $w_m$ lớn sẽ có bán trục ngắn hơn, phản ánh yêu cầu khắt khe hơn của DM.
-- **Tham số $\delta$** đóng vai trò "nút vặn" cho phép DM điều chỉnh độ tập trung: $\delta$ nhỏ (ví dụ 0.1) tạo ROI rất nhỏ, chỉ chấp nhận nghiệm rất gần $\mathbf{g}$ — phù hợp khi DM biết rõ mình muốn gì. $\delta$ lớn (ví dụ 0.5) tạo ROI rộng, chấp nhận nhiều nghiệm hơn — phù hợp giai đoạn khám phá ban đầu hoặc khi DM chưa chắc chắn.
-
-Trong triển khai, chúng tôi sử dụng $\delta = 0.2$ làm giá trị mặc định theo khuyến nghị của Molina et al. [30], đảm bảo ROI đủ nhỏ để tập trung tìm kiếm nhưng đủ lớn để chứa một lượng nghiệm đa dạng hợp lý trong mỗi thế hệ.
-
-**Ví dụ minh hoạ ($M = 3$).** Để minh họa cơ chế phân loại trong/ngoài ROI, tiếp tục sử dụng hai nghiệm A và B từ ví dụ ASF (Mục 6.1) với $\mathbf{g} = (10, 10, 10)$, $\mathbf{w} = (0.5, 0.3, 0.2)$, $\delta = 0.2$. Giả sử điểm ideal và nadir ước lượng từ quần thể là $\text{ideal} = (4, 5, 8)$ và $\text{nadir} = (15, 20, 25)$, cho biên độ các mục tiêu lần lượt là 11, 15 và 17.
-
-*Nghiệm A $(12, 11, 15)$:* tính từng chiều $z_m = \dfrac{w_m(f_m - g_m)}{\delta \cdot (\text{nadir}_m - \text{ideal}_m)}$:
+*Nghiệm A:* tính từng chiều $z_m = \dfrac{w_m(f_m - g_m)}{\delta \cdot (\text{nadir}_m - \text{ideal}_m)}$:
 
 | Chiều | $f_m - g_m$ | $\text{nadir}_m - \text{ideal}_m$ | $z_m = \dfrac{w_m(f_m - g_m)}{\delta \cdot \text{range}_m}$ |
 |---|---|---|---|
@@ -892,9 +812,9 @@ Trong triển khai, chúng tôi sử dụng $\delta = 0.2$ làm giá trị mặc
 
 $$\sum z_m^2 = 0.455^2 + 0.100^2 + 0.294^2 = 0.207 + 0.010 + 0.086 = 0.303$$
 
-$0.303 \leq 1$ → **A nằm trong ROI** ✓. Giá trị 0.303 cho thấy nghiệm A nằm khá sâu bên trong ellipsoid (chỉ chiếm khoảng 30% "ngân sách" khoảng cách cho phép).
+$0.303 \leq 1$ → **A nằm trong ROI** ✓
 
-*Nghiệm B $(14, 10, 12)$:*
+*Nghiệm B:*
 
 | Chiều | $f_m - g_m$ | $z_m$ |
 |---|---|---|
@@ -904,15 +824,13 @@ $0.303 \leq 1$ → **A nằm trong ROI** ✓. Giá trị 0.303 cho thấy nghi�
 
 $$\sum z_m^2 = 0.909^2 + 0^2 + 0.118^2 = 0.826 + 0 + 0.014 = 0.840$$
 
-$0.840 \leq 1$ → **B cũng nằm trong ROI** ✓, nhưng sát biên (chiếm 84% ngân sách). Chú ý rằng chiều $m=1$ đóng góp gần như toàn bộ ($0.826/0.840 \approx 98\%$) vào tổng — do $f_1$ của B lệch xa $g_1$ tới 4 đơn vị và đây lại là chiều có trọng số cao nhất ($w_1 = 0.5$). Nếu $\delta$ giảm nhẹ xuống 0.18, tổng $\sum z_m^2$ của B sẽ vượt 1 và B bị đẩy ra ngoài ROI, trong khi A vẫn ở trong.
+$0.840 \leq 1$ → **B cũng nằm trong ROI** ✓ (nhưng sát biên — nếu $\delta$ giảm nhẹ xuống 0.18, B sẽ ra ngoài)
 
-**Nhận xét tổng hợp.** Ví dụ trên minh họa ba đặc điểm quan trọng của ROI. Thứ nhất, ROI phân biệt được nghiệm "tốt đều" (A, nằm sâu trong ROI) với nghiệm "tốt lệch" (B, sát biên ROI) — thông tin mà Pareto dominance không cung cấp được vì A và B không so sánh được theo Pareto. Thứ hai, trọng số $w_m$ ảnh hưởng mạnh đến hình dạng ROI: chiều quan trọng ($w_1 = 0.5$) tạo bán trục ngắn, "phạt nặng" sai lệch trên chiều đó. Thứ ba, tham số $\delta$ cho phép DM điều chỉnh độ khắt khe một cách trực quan: giảm $\delta$ từ 0.2 xuống 0.18 loại bỏ B nhưng giữ A, tạo ra vùng quan tâm chặt hơn.
+**Nhận xét:** Dù cả A và B đều trong ROI, tổng $\sum z_m^2$ của A (0.303) nhỏ hơn B (0.840) rất nhiều — A nằm **sâu bên trong** vùng quan tâm, B nằm **sát rìa**. Khi $\delta$ thu nhỏ, B sẽ bị đẩy ra ngoài ROI trước, tạo ra sự phân biệt rõ ràng hơn giữa hai nghiệm trong cơ chế R-dominance (Mục 6.3).
 
-**ROI count metric.** Để theo dõi hiệu quả hội tụ của thuật toán về vùng preference qua các thế hệ, chúng tôi sử dụng chỉ số đếm:
+**ROI count metric:**
 
 $$\text{ROI\_count}(t) = |\{x \in PF(t) : x \in \text{ROI}\}| \tag{36}$$
-
-Chỉ số $\text{ROI\_count}(t)$ đếm số nghiệm trên tập xấp xỉ Pareto $PF(t)$ tại thế hệ $t$ mà nằm trong vùng ROI. Giá trị này tăng dần theo $t$ cho thấy thuật toán đang thành công trong việc tập trung nghiệm về vùng DM quan tâm. Nếu $\text{ROI\_count}$ bão hòa ở mức thấp, có thể cần mở rộng $\delta$ hoặc điều chỉnh $\mathbf{g}$. Chỉ số này sẽ được báo cáo trong phần thực nghiệm (Mục 11) cùng với các metric chất lượng khác như Hypervolume và IGD.
 
 ### 6.3 R-Dominance Ranking [30]
 
@@ -1015,85 +933,55 @@ Sau auto-calibration, $\mathbf{g}$ được đồng bộ tới ba thành phần 
 
 ## 7. Enhanced SSO với Lévy Flight & DE Perturbation
 
-Chương này trình bày đóng góp cốt lõi thứ hai (C2) của luận văn: cải tiến toán tử cập nhật của thuật toán Salp Swarm Optimization (SSO) bằng cách thay thế thành phần khám phá ngẫu nhiên vô hướng ($U(0,1)$) bằng hai cơ chế có cơ sở lý thuyết vững chắc — Lévy flight và DE perturbation. Mục tiêu là tăng cường khả năng khám phá không gian tìm kiếm mà không hy sinh tốc độ hội tụ, đặc biệt quan trọng khi landscape mục tiêu có $M = 5$ chiều với nhiều cực trị cục bộ.
-
-### 7.1 SSO gốc (Jain et al., 2019) [13]
-
-Salp Swarm Optimization (SSO) là thuật toán metaheuristic lấy cảm hứng từ hành vi bầy đàn của loài salp (hải tiêu) trong đại dương [13]. Trong tự nhiên, salp di chuyển theo chuỗi (salp chain): con đầu tiên (leader) dẫn hướng, các con còn lại (followers) bám theo lần lượt. SSO mô phỏng hành vi này bằng quy tắc cập nhật ba nhánh cho mỗi chiều $j$ của cá thể $i$:
+### 7.1 SSO  (Jain et al., 2019) [13]
 
 $$x_{i,j}^{\text{new}} = \begin{cases} \text{gbest}_j & \text{if } \rho_j \leq c_g \\ x_{i,j} & \text{if } c_g < \rho_j \leq c_w \\ U(0,1) & \text{otherwise} \end{cases} \tag{39}$$
 
-trong đó $\rho_j \sim U(0,1)$ là số ngẫu nhiên sinh riêng cho chiều $j$, và $c_g$, $c_w$ là hai ngưỡng xác suất kiểm soát tỷ lệ giữa ba hành vi:
-
-- **Nhánh 1 ($\rho_j \leq c_g$): Exploitation** — chiều $j$ được gán thẳng giá trị tương ứng của nghiệm tốt nhất toàn cục (gbest). Đây là cơ chế khai thác mạnh nhất, kéo cá thể về vùng lân cận gbest.
-- **Nhánh 2 ($c_g < \rho_j \leq c_w$): Conservation** — giá trị chiều $j$ giữ nguyên, không thay đổi. Cơ chế này bảo toàn thông tin hiện có, tránh phá vỡ các chiều đã tốt.
-- **Nhánh 3 ($\rho_j > c_w$): Random exploration** — chiều $j$ được thay bằng một giá trị ngẫu nhiên đều $U(0,1)$.
-
-**Nhược điểm của SSO gốc.** Nhánh exploration thứ ba — thành phần duy nhất chịu trách nhiệm khám phá vùng mới — sử dụng phân phối đều $U(0,1)$ hoàn toàn không có hướng. Giá trị mới sinh ra không phụ thuộc vào vị trí hiện tại $x_{i,j}$, vào gbest, hay vào bất kỳ cá thể nào khác trong quần thể. Hạn chế này dẫn đến hai hệ quả. Thứ nhất, bước nhảy không liên tục: cá thể có thể "dịch chuyển tức thời" đến vị trí hoàn toàn không liên quan, phá vỡ cấu trúc nghiệm đang xây dựng. Thứ hai, exploration thiếu hiệu quả: trong không gian $d$ chiều ($d = n + K - 1$ với random-key encoding), xác suất $U(0,1)$ rơi vào vùng hứa hẹn là rất thấp — đặc biệt khi $M = 5$ mục tiêu tạo ra landscape phức tạp với nhiều lưu vực thu hút (basin of attraction) khác nhau. Raza et al. [14] đã xác nhận nhược điểm này qua thực nghiệm so sánh các biến thể SSO.
+**Nhược điểm:** Thành phần random $U(0,1)$ không có hướng — exploration kém hiệu quả, đặc biệt khi $M = 5$ và landscape phức tạp. Điều này đã được Raza et al. [14] xác nhận qua so sánh các variants SSO.
 
 ### 7.2 Enhanced SSO (Đề xuất)
-
-Để khắc phục hạn chế trên, chúng tôi đề xuất thay thế nhánh random $U(0,1)$ bằng **hai cơ chế khám phá bổ sung lẫn nhau**, mở rộng quy tắc cập nhật từ ba nhánh thành bốn nhánh:
 
 $$x_{i,j}^{\text{new}} = \begin{cases} \text{gbest}_j & \text{if } \rho_j \leq c_g & \text{(exploitation)} \\ x_{i,j} & \text{if } c_g < \rho_j \leq c_w & \text{(conservation)} \\ x_{i,j} + L_j \cdot (\text{gbest}_j - x_{i,j}) \cdot 0.01 & \text{if } c_w < \rho_j \leq c_l & \text{(Lévy flight)} \\ x_{i,j} + F \cdot (x_{r1,j} - x_{r2,j}) & \text{otherwise} & \text{(DE perturbation)} \end{cases} \tag{40}$$
 
 trong đó:
-- $c_l = c_w + 0.6 (1 - c_w)$: ngưỡng ranh giới giữa vùng Lévy và vùng DE. Giá trị 0.6 được chọn để phân bổ khoảng 60% xác suất exploration cho Lévy flight (khám phá đa tỷ lệ) và 40% cho DE (khám phá có hướng).
-- $L_j$: bước nhảy Lévy (Lévy flight step), sinh theo thuật toán Mantegna (Eq. 41–42).
-- $F = 0.5$: hệ số co giãn DE (scaling factor), giá trị kinh điển được sử dụng rộng rãi trong cộng đồng DE [50].
-- $r1, r2$: hai cá thể ngẫu nhiên khác biệt trong quần thể ($r1 \neq r2 \neq i$), đóng vai trò donor vectors.
-
-Hai nhánh đầu (exploitation và conservation) giữ nguyên như SSO gốc — chúng đã hoạt động hiệu quả cho khai thác cục bộ. Sự khác biệt nằm hoàn toàn ở nửa sau: thay vì một nhánh random $U(0,1)$ duy nhất, Enhanced SSO chia vùng exploration thành hai cơ chế với đặc tính bổ trợ lẫn nhau. Lévy flight (nhánh 3) cung cấp bước nhảy **đa tỷ lệ** (multi-scale): chủ yếu là bước nhỏ quanh vị trí hiện tại nhưng thỉnh thoảng nhảy rất xa — phù hợp để thoát cực trị cục bộ. DE perturbation (nhánh 4) cung cấp bước nhảy **có hướng**: chiều và độ lớn bước nhảy được quyết định bởi vector hiệu $(x_{r1} - x_{r2})$ giữa hai cá thể trong quần thể — mang thông tin về gradient cục bộ của landscape.
+- $c_l = c_w + 0.6 (1 - c_w)$: ranh giới giữa Lévy và DE
+- $L_j$: Lévy flight step (Eq. 41-42)
+- $F = 0.5$: DE scaling factor
+- $r1, r2$: hai cá thể ngẫu nhiên khác biệt ($r1 \neq r2 \neq i$)
 
 ### 7.3 Lévy Flight — Mantegna's Algorithm [47]
-
-Lévy flight là quá trình bước ngẫu nhiên (random walk) trong đó độ dài mỗi bước tuân theo phân phối Lévy ổn định — một lớp phân phối đuôi nặng (heavy-tailed) với phương sai vô hạn [23]. Đặc trưng của Lévy flight là sự xen kẽ giữa nhiều bước nhỏ (khai thác vùng lân cận) và thỉnh thoảng một bước rất dài (khám phá vùng xa) — mô hình mà các nhà sinh thái học đã chứng minh là **chiến lược tìm kiếm tối ưu** (optimal foraging strategy) trong tự nhiên khi mục tiêu phân bố thưa thớt và ngẫu nhiên [23].
-
-Để sinh bước nhảy Lévy hiệu quả, chúng tôi sử dụng thuật toán Mantegna [47] — phương pháp được ưa chuộng nhất trong cộng đồng metaheuristic nhờ tính đơn giản và chính xác:
 
 $$L = \frac{u}{|v|^{1/\beta}}, \quad \beta = 1.5 \tag{41}$$
 
 $$u \sim \mathcal{N}(0, \sigma_u^2), \quad v \sim \mathcal{N}(0, 1)$$
 
-trong đó $u$ và $v$ là hai biến ngẫu nhiên chuẩn độc lập, $\beta = 1.5$ là chỉ số ổn định (stability index) quyết định "độ nặng" của đuôi phân phối. Giá trị $\beta = 1.5$ nằm ở trung điểm miền hợp lệ $(1, 3)$, cân bằng giữa exploration ($\beta$ nhỏ → đuôi nặng hơn → nhiều bước dài hơn) và exploitation ($\beta$ lớn → tiến gần phân phối chuẩn → chủ yếu bước nhỏ). Tham số $\sigma_u$ được tính theo công thức đóng của Mantegna:
-
 $$\sigma_u = \left[ \frac{\Gamma(1+\beta) \sin(\pi\beta/2)}{\Gamma\left(\frac{1+\beta}{2}\right) \beta \cdot 2^{(\beta-1)/2}} \right]^{1/\beta} \tag{42}$$
 
-Công thức (42) đảm bảo rằng tỷ số $u/|v|^{1/\beta}$ tuân theo phân phối Lévy ổn định với chỉ số $\beta$, trong đó $\Gamma(\cdot)$ là hàm Gamma. Với $\beta = 1.5$, giá trị $\sigma_u \approx 0.6966$ — tính trước một lần duy nhất khi khởi tạo thuật toán.
-
-Trong quy tắc cập nhật (Eq. 40, nhánh 3), bước nhảy Lévy $L_j$ được kết hợp với **vector hướng** $(\text{gbest}_j - x_{i,j})$ và nhân hệ số $0.01$:
-
-$$x_{i,j}^{\text{new}} = x_{i,j} + L_j \cdot (\text{gbest}_j - x_{i,j}) \cdot 0.01$$
-
-Thiết kế này có ba ý đồ. Thứ nhất, nhân với $(\text{gbest}_j - x_{i,j})$ giúp bước nhảy **có hướng** — thiên về phía gbest thay vì hoàn toàn ngẫu nhiên, kết hợp exploration với exploitation. Thứ hai, hệ số $0.01$ giữ bước nhảy trong phạm vi hợp lý trên không gian $[0,1)$ của random-key encoding — tránh bước nhảy quá lớn phá vỡ cấu trúc giải mã. Thứ ba, do $L_j$ có phân phối đuôi nặng, thỉnh thoảng $|L_j|$ rất lớn (hàng chục đến hàng trăm), tạo bước nhảy dài vượt vùng lân cận, giúp thoát cực trị cục bộ — ngay cả sau khi nhân 0.01.
-
-**Tại sao Lévy flight phù hợp cho VRPTW?** Landscape mục tiêu của VRPTW với $M = 5$ có đặc điểm: nhiều lưu vực thu hút (basins of attraction) ứng với các cấu hình số xe và thứ tự khách hàng khác nhau, cách nhau bởi "rào cản" (barriers) trong không gian random-key. Lévy flight với tính chất superdiffusion — $P(l) \sim l^{-\beta}$, $1 < \beta < 3$ — là cơ chế lý tưởng để vượt qua các rào cản này: phần lớn thời gian khai thác cục bộ quanh lưu vực hiện tại, nhưng thỉnh thoảng nhảy sang lưu vực mới hoàn toàn [23, 24, 25, 48, 49].
+**Tại sao Lévy flight? [23, 24, 25]:**
+- Lévy flights thuộc lớp **superdiffusion**: phần lớn steps nhỏ (exploitation cục bộ) xen kẽ occasional long jumps (exploration toàn cục)
+- Phân phối heavy-tailed: $P(l) \sim l^{-\beta}$, $1 < \beta < 3$
+- Đã được chứng minh là optimal foraging strategy [23]
+- Gần đây được tích hợp thành công vào nhiều metaheuristic [24, 25, 48, 49]
 
 ### 7.4 DE/rand/1 Perturbation [50, 26]
 
-Differential Evolution (DE) là thuật toán tiến hóa do Storn và Price (1997) [50] đề xuất, nổi tiếng với cơ chế đột biến dựa trên vector hiệu (difference vector) giữa các cá thể trong quần thể. Trong Enhanced SSO, chúng tôi tích hợp chiến lược **DE/rand/1** — biến thể đơn giản nhất và được nghiên cứu kỹ nhất — làm nhánh exploration thứ hai:
-
 $$x_{i,j}^{\text{new}} = x_{i,j} + F \cdot (x_{r1,j} - x_{r2,j}), \quad F = 0.5 \tag{43}$$
 
-Công thức (43) cộng vào vị trí hiện tại $x_{i,j}$ một lượng perturbation $F \cdot (x_{r1,j} - x_{r2,j})$, trong đó:
-
-- $(x_{r1,j} - x_{r2,j})$ là **vector hiệu** giữa hai cá thể ngẫu nhiên $r1$ và $r2$ trong quần thể. Vector này mang thông tin quý giá: chiều và độ lớn phản ánh sự phân tán cục bộ của quần thể theo chiều $j$ — tương tự như một ước lượng gradient thô (approximate gradient) của landscape.
-- $F = 0.5$ là hệ số co giãn (scaling factor), kiểm soát bước nhảy. Giá trị $F = 0.5$ là lựa chọn cổ điển [50], đảm bảo bước nhảy không quá nhỏ (mất hiệu quả exploration) cũng không quá lớn (phá vỡ cấu trúc nghiệm).
-
-**Tại sao DE perturbation bổ sung hiệu quả cho Lévy flight?** Hai cơ chế có đặc tính **bổ trợ** (complementary) rõ ràng. Lévy flight tạo bước nhảy với **độ lớn đa tỷ lệ** nhưng hướng phụ thuộc vào gbest — dễ bị bias khi gbest ở vùng cực trị cục bộ. DE perturbation tạo bước nhảy với **hướng đa dạng** dựa trên phân bố quần thể — mỗi cặp $(r1, r2)$ khác nhau cho một hướng tìm kiếm khác. Kết hợp cả hai, Enhanced SSO khám phá đồng thời ở nhiều tỷ lệ (scale) và nhiều hướng (direction), giảm đáng kể nguy cơ mắc kẹt tại cực trị cục bộ [26, 27].
+**Tại sao DE perturbation? [26, 27]:**
+- Cung cấp **directed search** dựa trên difference vector $(x_{r1} - x_{r2})$
+- Bổ sung cho Lévy flight (undirected but heavy-tailed)
+- Kết hợp thông tin từ 2 donor vectors → search direction phong phú hơn
 
 ### 7.5 So sánh Original vs Enhanced SSO
 
-Bảng dưới đây tổng hợp sự khác biệt giữa SSO gốc và phiên bản Enhanced SSO đề xuất trên sáu khía cạnh:
-
-| Khía cạnh | SSO gốc [13] | Enhanced SSO (đề xuất) |
+| Aspect | Original SSO [13] | Enhanced SSO (đề xuất) |
 |---|---|---|
-| Cơ chế exploration | Random $U(0,1)$ — không hướng, không phụ thuộc vị trí hiện tại | Lévy: bước nhảy đa tỷ lệ, heavy-tailed + DE: bước nhảy có hướng dựa trên quần thể |
-| Kích thước bước | Cố định trên $[0,1]$, không thích ứng | Lévy: tự thích ứng theo phân phối đuôi nặng, từ rất nhỏ đến rất lớn |
-| Sử dụng thông tin | Chỉ gbest (nhánh exploitation) | gbest (exploitation + hướng Lévy) + 2 donors $r1, r2$ (DE) |
-| Hành vi hội tụ | Hội tụ nhanh ban đầu nhưng dễ bão hòa (stagnation) do exploration kém | Cân bằng: duy trì exploration hiệu quả qua nhiều thế hệ, giảm stagnation |
-| Cơ sở lý thuyết | Không có cơ sở lý thuyết cho nhánh $U(0,1)$ | Lévy flight: optimal foraging, superdiffusion [23]; DE: directed mutation với convergence guarantee [50] |
-| Phân bổ xác suất | 3 nhánh: exploit / conserve / random | 4 nhánh: exploit / conserve / Lévy / DE — kiểm soát tinh hơn tỷ lệ exploration |
+| Exploration | Random $U(0,1)$ — không hướng | Lévy: heavy-tailed jumps + DE: directed |
+| Step size | Cố định $[0,1]$ | Lévy: adaptive, heavy-tailed |
+| Information usage | Chỉ gbest | gbest + 2 donors ($r1, r2$) |
+| Convergence | Fast nhưng stagnation-prone | Balanced: escape local optima |
+| Theoretical support | Không có | Lévy ⊂ superdiffusion [23]; DE ⊂ directed mutation [50] |
+| Probability allocation | 3 branches | 4 branches (thêm Lévy zone) |
 
 ### 7.6 Algorithm 2: Enhanced SSO Update
 
@@ -1134,138 +1022,125 @@ Output: x_i^new (updated solution)
 
 ### 8.1 Tổng quan [17, 18]
 
-Các toán tử SSO (Mục 7) thao tác trên không gian random-key liên tục $[0,1)^d$ — hiệu quả cho khám phá toàn cục nhưng khó khai thác cấu trúc tổ hợp đặc thù của VRPTW (quan hệ lân cận giữa khách hàng, ràng buộc cửa sổ thời gian, cấu hình tuyến đường). Để bổ khuyết, chúng tôi tích hợp **Adaptive Large Neighbourhood Search (ALNS)** — framework tìm kiếm lân cận quy mô lớn do Ropke và Pisinger (2006) [17] đề xuất — làm toán tử local search hoạt động trực tiếp trên biểu diễn tuyến đường (route representation).
-
-ALNS thuộc lớp **destroy–repair metaheuristic**: mỗi vòng lặp, một phần lời giải hiện tại bị phá hủy (destroy) bằng cách loại bỏ một tập khách hàng, sau đó lời giải được tái tạo (repair) bằng cách chèn lại các khách hàng đã loại vào các vị trí mới. Ý tưởng cốt lõi là: bằng cách phá hủy và xây dựng lại các phần khác nhau của lời giải, ALNS khám phá "lân cận lớn" (large neighbourhood) mà các toán tử local search đơn giản (2-opt, or-opt) không thể tiếp cận.
-
-Điểm khác biệt quan trọng của ALNS so với LNS thông thường là cơ chế **adaptive** (thích ứng): thay vì cố định một cặp destroy–repair, ALNS duy trì một **bộ toán tử đa dạng** (trong triển khai của chúng tôi: 5 destroy + 4 repair = tổng cộng $5 \times 4 = 20$ tổ hợp khả thi) và sử dụng **roulette-wheel selection** với trọng số tự điều chỉnh theo hiệu quả thực tế. Toán tử nào tạo ra cải thiện tốt trong các vòng gần đây sẽ có xác suất được chọn cao hơn ở các vòng tiếp theo — cơ chế "tự học" này cho phép thuật toán thích ứng với đặc thù của từng instance và từng giai đoạn tìm kiếm.
-
-Thiết kế bộ toán tử trong luận văn này dựa trên hai nguồn chính: framework gốc của Ropke và Pisinger [17] và tổng quan hệ thống 211 bài báo ALNS cho VRP của Türkeş et al. [18] trong European Journal of Operational Research (2025), từ đó chúng tôi chọn lọc các toán tử được báo cáo hiệu quả nhất trên VRPTW.
+ALNS framework (Ropke & Pisinger, 2006) [17] với 5 destroy operators (D1–D5) và 4 repair operators (R1–R4), cùng roulette-wheel adaptive selection. Thiết kế operators dựa trên insights từ tổng quan 211 bài báo của Türkeş et al. [18] trong EJOR 2025.
 
 ### 8.2 Adaptive Scoring [17]
 
-Cơ chế adaptive scoring là "bộ não" điều phối của ALNS, quyết định toán tử nào được ưu tiên sử dụng dựa trên hiệu quả quan sát được. Mỗi toán tử $k$ (cả destroy lẫn repair) được gán một trọng số $\pi_k$ phản ánh "mức tin cậy" hiện tại đối với toán tử đó. Trọng số này được cập nhật liên tục qua cơ chế **exponential smoothing** (làm mượt hàm mũ):
-
-**Score update:**
+**Score update (exponential smoothing):**
 
 $$\pi_k(s+1) = (1 - r) \cdot \pi_k(s) + r \cdot \Delta_k(s) \tag{44}$$
 
-trong đó $r = 0.1$ là **reaction factor** — tham số điều khiển tốc độ thích ứng. Giá trị $r$ nhỏ ($r = 0.1$) nghĩa là trọng số thay đổi chậm, ưu tiên ổn định và tránh phản ứng thái quá với một vòng lặp đơn lẻ may mắn/xui rủi. $\Delta_k(s)$ là phần thưởng trung bình (average reward) mà toán tử $k$ nhận được trong segment $s$ — một đoạn gồm 25 vòng lặp ALNS liên tiếp. Công thức (44) kết hợp "ký ức dài hạn" $(1-r) \cdot \pi_k(s)$ với "thông tin mới" $r \cdot \Delta_k(s)$, tạo ra sự cân bằng giữa khai thác toán tử đã tốt và thử lại toán tử từng kém.
+trong đó $r = 0.1$ là reaction factor, $\Delta_k$ là average reward trong segment.
 
-**Selection probability.** Sau khi cập nhật trọng số, xác suất chọn toán tử $k$ được tính theo roulette-wheel:
+**Selection probability:**
 
 $$P(k) = \frac{\pi_k}{\sum_{j} \pi_j} \tag{45}$$
 
-Công thức (45) đảm bảo tất cả toán tử luôn có xác suất dương (vì $\pi_k > 0$), tránh loại bỏ hoàn toàn bất kỳ toán tử nào — điều quan trọng vì hiệu quả toán tử có thể thay đổi theo giai đoạn tìm kiếm (ví dụ, random removal có thể kém ở giai đoạn đầu nhưng hữu ích khi quần thể hội tụ và cần đa dạng hóa).
+**Reward levels:**
 
-**Reward levels.** Sau mỗi vòng ALNS, cặp toán tử destroy–repair vừa sử dụng nhận một phần thưởng $\sigma$ tùy theo chất lượng kết quả:
-
-| Level | $\sigma$ | Điều kiện | Ý nghĩa |
-|---|---|---|---|
-| 0 (best) | 33 | Tìm được global best mới | Toán tử phát hiện vùng chưa từng khám phá, thưởng rất cao |
-| 1 | 9 | Improving và non-dominated | Cải thiện lời giải hiện tại nhưng chưa phải best toàn cục |
-| 2 | 3 | Chấp nhận bởi SA criterion | Lời giải tệ hơn nhưng vẫn được chấp nhận (duy trì đa dạng) |
-| 3 | 0 | Bị reject | Lời giải quá tệ, không chấp nhận → không thưởng |
-
-Tỷ lệ $33 : 9 : 3 : 0$ (gần $11 : 3 : 1 : 0$) tạo gradient thưởng rõ ràng: thuật toán mạnh tay thưởng cho đột phá (global best) nhưng vẫn ghi nhận cải thiện nhỏ, thậm chí cả bước đi "ngang" (accepted by SA) — khuyến khích toán tử duy trì exploration ngay cả khi chưa tạo ra cải thiện trực tiếp.
+| Level | $\sigma$ | Điều kiện |
+|---|---|---|
+| 0 (best) | 33 | Tìm được global best mới |
+| 1 | 9 | Improving, non-dominated |
+| 2 | 3 | Chấp nhận bởi SA criterion |
+| 3 | 0 | Bị reject |
 
 ### 8.3 Destroy Operators
 
-Destroy operators chịu trách nhiệm **phá vỡ** một phần lời giải hiện tại bằng cách loại bỏ một tập khách hàng khỏi các tuyến đường. Số lượng khách hàng bị loại $n_r$ được sinh ngẫu nhiên trong khoảng $U[\lceil 0.15N \rceil, \lceil 0.40N \rceil]$, với $N$ là tổng số khách hàng đang được phục vụ. Khoảng 15%–40% đảm bảo quy mô phá hủy đủ lớn để tạo lân cận rộng, nhưng không quá lớn đến mức repair phải xây lại gần như từ đầu (mất thông tin tốt). Năm toán tử destroy được thiết kế với chiến lược loại bỏ khác nhau, tạo sự đa dạng trong cách khám phá lân cận:
-
-**D1 — Worst Removal.** Toán tử này nhắm vào các khách hàng "đắt đỏ" nhất — những khách hàng mà việc loại bỏ tiết kiệm nhiều khoảng cách nhất. Đối với mỗi khách hàng $c$ đang nằm trên một tuyến, saving (tiết kiệm) khi loại $c$ được tính:
+**D1 — Worst Removal:**
 
 $$\text{saving}(c) = d_{\text{prev}(c), c} + d_{c, \text{next}(c)} - d_{\text{prev}(c), \text{next}(c)} \tag{46}$$
 
-trong đó $\text{prev}(c)$ và $\text{next}(c)$ là khách hàng liền trước và liền sau $c$ trên tuyến (depot nếu $c$ ở đầu/cuối). Công thức (46) tính hiệu giữa tổng hai cạnh nối qua $c$ và cạnh "tắt" nối trực tiếp hai láng giềng — chính là lượng khoảng cách tiết kiệm được nếu bỏ $c$ đi. Thuật toán sắp xếp tất cả khách hàng theo saving giảm dần và loại $n_r$ khách có saving cao nhất. Chiến lược này nhắm trúng "điểm yếu" của lời giải: khách hàng ở vị trí bất lợi nhất sẽ bị loại ra trước, tạo cơ hội cho repair chèn chúng vào vị trí tốt hơn.
+Loại bỏ $n_r$ khách hàng có saving cao nhất, $n_r \sim U[0.15N, 0.40N]$.
 
-**D2 — Shaw Removal [51].** Thay vì loại khách hàng đắt nhất, Shaw removal loại một nhóm khách hàng **tương đồng** (related) — những khách gần nhau về không gian, thời gian, và nhu cầu. Mức độ tương đồng giữa hai khách hàng $i$ và $j$ được đo bằng chỉ số relatedness:
+**D2 — Shaw Removal [51]:**
 
 $$R(i,j) = \alpha \frac{d_{ij}}{d_{\max}} + \beta \frac{|e_i - e_j|}{tw_{\max}} + \gamma \frac{|q_i - q_j|}{q_{\max}} \tag{47}$$
 
-trong đó ba thành phần lần lượt đo khoảng cách không gian (chuẩn hóa theo $d_{\max}$), chênh lệch cửa sổ thời gian (chuẩn hóa theo $tw_{\max}$), và chênh lệch nhu cầu (chuẩn hóa theo $q_{\max}$). Trọng số $\alpha = 0.4$, $\beta = 0.3$, $\gamma = 0.3$ phản ánh ưu tiên cho yếu tố vị trí địa lý. Thuật toán chọn một khách hàng seed ngẫu nhiên, sau đó lần lượt chọn thêm khách hàng có $R$ nhỏ nhất (tương đồng nhất) với khách vừa chọn, lặp lại cho đến khi đủ $n_r$. Triết lý của Shaw removal là: loại một nhóm khách tương đồng tạo ra "khoảng trống" đủ lớn và đồng nhất để repair có thể sắp xếp lại nhóm đó theo cấu hình tốt hơn — đặc biệt hiệu quả trên các instance dạng clustered (nhóm C1, C2 của Solomon).
+$\alpha = 0.4, \beta = 0.3, \gamma = 0.3$. Loại khách hàng liên quan (related) → đa dạng hơn khi reinsertion.
 
-**D3 — Route Removal.** Toán tử này loại bỏ **toàn bộ tuyến đường** thay vì từng khách hàng riêng lẻ. Xác suất chọn tuyến $k$ bị loại tỷ lệ nghịch hàm mũ với độ dài tuyến:
+**D3 — Route Removal:**
 
 $$P(k) \propto \exp\left(-10 \cdot \frac{|\tau_k|}{\max_j |\tau_j|}\right) \tag{48}$$
 
-Tuyến ngắn (ít khách hàng) có xác suất bị loại cao hơn hẳn — hệ số $-10$ trong hàm mũ tạo ra phân biệt rất mạnh. Triết lý là: tuyến ngắn thường là "tuyến thừa" mà thuật toán tạo ra khi không tìm được cách ghép khách hàng một cách hiệu quả. Loại bỏ toàn bộ tuyến ngắn cho phép repair phân phối lại khách hàng sang các tuyến khác, có tiềm năng **giảm số xe** ($Z_1$) — mục tiêu thường được DM ưu tiên hàng đầu. Thuật toán chọn tối đa $\lfloor K/3 \rfloor$ tuyến để loại, đảm bảo không phá hủy quá nhiều cấu trúc cùng lúc.
+Loại toàn bộ route, ưu tiên route ngắn (nhiều khả năng redundant).
 
-**D4 — Random Removal.** Toán tử đơn giản nhất: chọn đều $n_r$ khách hàng ngẫu nhiên từ toàn bộ lời giải để loại bỏ. Mặc dù không sử dụng bất kỳ thông tin nào về cấu trúc lời giải, random removal đóng vai trò quan trọng trong bộ toán tử ALNS: nó cung cấp **exploration không thiên lệch** (unbiased exploration), tránh hiện tượng tất cả toán tử destroy đều hướng về cùng một vùng (ví dụ worst removal luôn loại cùng một nhóm khách). Türkeş et al. [18] xác nhận rằng bộ toán tử ALNS thiếu random removal thường kém đa dạng và dễ bị stagnation.
+**D4 — Random Removal:** Chọn đều $n_r$ khách hàng ngẫu nhiên.
 
-**D5 — Proximity Removal.** Toán tử này loại một **cụm khách hàng gần nhau về mặt địa lý**: chọn một khách hàng seed ngẫu nhiên, sau đó loại $n_r - 1$ khách hàng gần nhất theo khoảng cách Euclid $d_{ij}$. Khác với Shaw removal (xét cả time window và demand), proximity removal chỉ xét khoảng cách thuần túy — phù hợp để tái cấu trúc các cụm địa lý mà không bị ảnh hưởng bởi yếu tố thời gian. Toán tử này đặc biệt hiệu quả trên các instance nhóm C (clustered) của Solomon, nơi khách hàng phân bố thành cụm rõ ràng.
+**D5 — Proximity Removal:** Chọn seed ngẫu nhiên, loại $n_r - 1$ khách hàng gần nhất theo $d_{ij}$.
 
 ### 8.4 Repair Operators
 
-Repair operators chịu trách nhiệm **xây dựng lại** lời giải sau khi destroy bằng cách chèn các khách hàng đã bị loại trở lại các tuyến đường. Bốn toán tử repair được thiết kế với chiến lược chèn khác nhau, từ đơn giản (greedy) đến tinh vi (A*-based với preference):
-
-**R1 — Regret-2 Insertion.** Regret insertion là chiến lược chèn "nhìn xa" (look-ahead): thay vì chèn khách hàng có chi phí chèn thấp nhất ngay lập tức (greedy), regret insertion ưu tiên khách hàng có **nguy cơ mất cơ hội** cao nhất. Cụ thể, với mỗi khách hàng $c$ chưa được phục vụ, tính chi phí chèn tốt nhất ($\text{cost}_1(c)$) và chi phí chèn tốt nhì ($\text{cost}_2(c)$) trên tất cả các vị trí và tuyến:
+**R1 — Regret-2 Insertion:**
 
 $$\text{regret}(c) = \text{cost}_2(c) - \text{cost}_1(c) \tag{49}$$
 
-Giá trị regret cao nghĩa là khách hàng $c$ chỉ có **một** vị trí tốt để chèn — nếu vị trí đó bị chiếm, chi phí sẽ tăng vọt. Thuật toán chèn khách hàng có regret cao nhất trước, đảm bảo không "lãng phí" cơ hội duy nhất của những khách hàng khó xếp. Chiến lược này được Ropke và Pisinger [17] chứng minh vượt trội greedy insertion trên hầu hết instance VRPTW.
+Chèn khách hàng có regret cao nhất trước (khẩn cấp nhất).
 
-**R2 — Regret-3 Insertion.** Mở rộng regret-2 bằng cách xét thêm chi phí chèn tốt ba:
+**R2 — Regret-3 Insertion:**
 
 $$\text{regret}_3(c) = \sum_{j=2}^{3} (\text{cost}_j(c) - \text{cost}_1(c)) \tag{50}$$
 
-Regret-3 "nhìn xa hơn" regret-2: khách hàng có tổng chênh lệch giữa ba vị trí tốt nhất lớn nhất sẽ được chèn trước. Trên các instance lớn ($n = 100$) với nhiều tuyến, regret-3 thường hiệu quả hơn regret-2 vì nó phân biệt tốt hơn giữa khách hàng "dễ xếp" (nhiều vị trí tốt, regret thấp) và khách hàng "khó xếp" (ít vị trí tốt, regret cao).
+**R3 — Greedy Cheapest Insertion:** Chèn vào vị trí chi phí thấp nhất, theo $l_i$ tăng dần.
 
-**R3 — Greedy Cheapest Insertion.** Toán tử đơn giản nhất: sắp xếp khách hàng chưa phục vụ theo deadline $l_i$ tăng dần (khách hàng khẩn cấp nhất trước), sau đó lần lượt chèn mỗi khách vào vị trí có chi phí chèn thấp nhất trên tất cả các tuyến. Nếu không tìm được vị trí khả thi (do vi phạm capacity hoặc time window), tạo tuyến mới. Mặc dù đơn giản, greedy insertion chạy nhanh nhất trong bốn toán tử và tạo ra kết quả "đủ tốt" — đặc biệt hữu ích khi ALNS cần thực hiện nhiều vòng lặp trong thời gian giới hạn.
-
-**R4 — A*-based Build.** Toán tử tinh vi nhất, lấy cảm hứng từ thuật toán A* trong tìm đường: xây dựng tuyến mới từ đầu bằng cách chọn khách hàng tiếp theo dựa trên hàm đánh giá tổng hợp:
+**R4 — A*-based Build:**
 
 $$f(c) = w_1 \cdot g_{\text{sc}}(c) + w_2 \cdot tw_{\text{sc}}(c) + (1 - w_1 - w_2) \cdot h_{\text{sc}}(c) \tag{51}$$
 
-trong đó $g_{\text{sc}}(c)$ là khoảng cách chuẩn hóa từ vị trí hiện tại đến $c$ (tương tự hàm $g$ trong A*), $tw_{\text{sc}}(c) = 1 / \max(1, l_c - e_c)$ là mức độ khẩn cấp của cửa sổ thời gian (time window urgency — cửa sổ hẹp thì khẩn cấp hơn), và $h_{\text{sc}}(c)$ là heuristic ước lượng chi phí còn lại (reachability). Trọng số $w_1, w_2$ được lấy trực tiếp từ weight vector $\mathbf{w}$ của preference DM — đây là điểm **tích hợp preference** vào ALNS: khi DM ưu tiên khoảng cách ($w_1$ lớn), A*-build sẽ chọn khách gần nhất; khi ưu tiên thời gian chờ ($w_2$ lớn), sẽ chọn khách có cửa sổ thời gian khẩn cấp nhất. Khách hàng được chọn theo xác suất tỷ lệ nghịch với $f(c)$ (stochastic selection), tránh greedy thuần túy.
+$g_{\text{sc}}$ = normalized distance, $tw_{\text{sc}}$ = time window urgency, $h_{\text{sc}}$ = reachability heuristic.
 
-### 8.5 Vai trò ALNS trong Framework Many-Objective
+### 8.5 Simulated Annealing Acceptance
 
-Cần làm rõ rằng ALNS trong iNSSSO **không hoạt động như một metaheuristic độc lập** với vòng lặp và acceptance criterion riêng (như trong framework ALNS gốc của Ropke và Pisinger [17]). Thay vào đó, ALNS đóng vai trò **toán tử sinh offspring** (offspring generator) — tương đương với Enhanced SSO (Mục 7) nhưng thao tác trực tiếp trên biểu diễn tuyến đường thay vì không gian random-key.
+$$\text{accept}(\Delta f) \iff \Delta f < 0 \;\lor\; U(0,1) < \exp\left(-\frac{\Delta f}{T}\right) \tag{52}$$
 
-Cụ thể, tại mỗi thế hệ, mỗi cá thể $i$ trong quần thể được cập nhật theo một trong hai con đường:
+$$T_{t+1} = c_T \cdot T_t, \quad c_T = 0.995 \tag{53}$$
 
-- Với xác suất $p_{\text{ALNS}}$ (tham số `n_abs`, mặc định $0.2$): cá thể được gửi qua ALNS, trải qua destroy → repair → 2-opt, trả về offspring mới.
-- Với xác suất $1 - p_{\text{ALNS}}$: cá thể được cập nhật bằng Enhanced SSO (Eq. 40).
-
-Offspring sinh ra từ cả hai con đường đều được đưa vào **cùng một bước chọn lọc** (selection) dựa trên non-dominated sorting + SDE crowding + reference direction niching — cơ chế chọn lọc đa mục tiêu trên cả 5 hàm mục tiêu (Mục 5). Nói cách khác, ALNS **không tự quyết định** chấp nhận hay từ chối lời giải — quyết định đó thuộc về bước selection của framework many-objective.
-
-Thiết kế này có hai ưu điểm. Thứ nhất, tránh phải định nghĩa $\Delta f$ vô hướng cho bài toán 5 mục tiêu — một vấn đề không tầm thường vì khái niệm "tốt hơn" không đơn giản khi $M = 5$. Thứ hai, cho phép ALNS tập trung vào việc sinh offspring đa dạng và chất lượng, còn việc cân bằng giữa convergence và diversity được xử lý thống nhất bởi framework chọn lọc.
-
-Trọng số adaptive của các toán tử destroy/repair (Eq. 44–45) vẫn được cập nhật sau mỗi segment dựa trên hiệu quả quan sát được — nhưng "hiệu quả" ở đây được đo bằng việc offspring có sống sót qua bước selection hay không (thay vì SA acceptance), đảm bảo toán tử nào tạo offspring tốt theo nghĩa đa mục tiêu sẽ được ưu tiên.
-
-### 8.6 Algorithm 3: ALNS Offspring Generation
+### 8.6 Algorithm 3: ALNS with Adaptive Operator Selection
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Algorithm 3: ALNS Offspring Generation
+Algorithm 3: ALNS with Adaptive Operator Selection
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Input:  Solution S (decoded routes), operator scores π
-Output: New offspring S'
+Input:  Solution S (decoded routes), T₀, c_T, operator scores π
+Output: Improved solution S'
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 1: // Select destroy operator via roulette-wheel
- 2: d ← RouletteSelect({D1,...,D5}, π_destroy)  // Eq. 45
- 3: n_r ← U[⌈0.15|C|⌉, ⌈0.40|C|⌉]
- 4: (removed, kept_routes) ← d.apply(S, n_r)
- 5:
- 6: // Select repair operator via roulette-wheel
- 7: r ← RouletteSelect({R1,...,R4}, π_repair)    // Eq. 45
- 8: S' ← r.apply(removed, kept_routes)
- 9:
-10: // Post-processing: 2-opt on each route
-11: for each route τ_k in S' do
-12:     τ_k ← TwoOpt(τ_k)
-13: end for
-14:
-15: // Re-encode: routes → random-key vector
-16: S' ← ReverseEncode(S')  // Eq. 16-17 ngược
-17:
-18: // Evaluate 5 objectives + penalty
-19: f(S') ← (Z₁, Z₂, Z₃, Z₄, Z₅) + penalty  // Eq. 1-5, 13
-20:
-21: return S'
-22: // → S' enters offspring pool
-23: // → Accepted/rejected by NDS+SDE selection (Mục 5)
+ 1: S_best ← S;  T ← T₀
+ 2:
+ 3: // Select destroy operator via roulette-wheel
+ 4: d ← RouletteSelect({D1,...,D5}, π_destroy)  // Eq. 45
+ 5: n_r ← U[⌈0.15|C|⌉, ⌈0.40|C|⌉]
+ 6: (removed, kept_routes) ← d.apply(S, n_r)
+ 7:
+ 8: // Select repair operator via roulette-wheel
+ 9: r ← RouletteSelect({R1,...,R4}, π_repair)    // Eq. 45
+10: S' ← r.apply(removed, kept_routes)
+11:
+12: // Post-processing: 2-opt on each route
+13: for each route τ_k in S' do
+14:     τ_k ← TwoOpt(τ_k)
+15: end for
+16:
+17: // Evaluate
+18: Δf ← ObjectiveChange(S', S)  // ASF-based hoặc Z₂-based
+19:
+20: // SA acceptance (Eq. 52)
+21: if Δf < 0 or U(0,1) < exp(-Δf/T) then
+22:     S ← S'
+23:     if Dominates(S', S_best) then
+24:         reward ← σ₀ = 33  // New best
+25:     else
+26:         reward ← σ₂ = 3   // Accepted by SA
+27:     end if
+28: else
+29:     reward ← σ₃ = 0       // Rejected
+30: end if
+31:
+32: // Update operator scores (Eq. 44)
+33: π_destroy[d] ← (1-r)·π_destroy[d] + r·reward
+34: π_repair[r] ← (1-r)·π_repair[r] + r·reward
+35:
+36: T ← c_T · T
+37: return S
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -1348,36 +1223,24 @@ Nếu sau đó xuất hiện nghiệm S có $f = (11, 12)$ → ô $(2, 2)$, $\te
 
 ### 9.4 Diversity Archive Pruning
 
-Archive đa dạng $A_{\text{div}}$ chấp nhận mọi nghiệm không bị trội — do đó có xu hướng phình to nhanh chóng, đặc biệt khi $M = 5$ khiến tỷ lệ nghiệm không bị trội rất cao (hiện tượng dominance resistance). Khi số nghiệm vượt ngưỡng $N_{\max}$, cần loại bỏ bớt mà vẫn **bảo tồn đa dạng** — tức giữ lại các nghiệm phân bố rải đều trên toàn bộ mặt Pareto, đặc biệt các nghiệm biên (extreme).
-
-Chúng tôi sử dụng **Shift-based Density Estimation (SDE)** (đã trình bày tại Mục 5, Eq. 24–27) làm tiêu chí pruning. SDE đo mật độ quanh mỗi nghiệm trong không gian mục tiêu: giá trị SDE cao nghĩa là nghiệm nằm **cô lập**, xa các nghiệm khác — đóng vai trò đại diện quan trọng cho một vùng riêng trên Pareto front. Ngược lại, SDE thấp nghĩa là nghiệm nằm trong vùng **đông đúc**, gần nhiều nghiệm khác — loại bỏ nó ít mất thông tin nhất. Quy tắc pruning:
+Khi $|A_{\text{div}}| > N_{\max}$:
 
 $$\text{remove} = \arg\min_{i \in A_{\text{div}}} \text{SDE}(i) \tag{56}$$
 
-Mỗi lần $|A_{\text{div}}|$ vượt $N_{\max}$, nghiệm có SDE thấp nhất (đông đúc nhất) bị loại. Quá trình lặp lại cho đến khi $|A_{\text{div}}| \leq N_{\max}$. Ưu điểm của SDE so với crowding distance truyền thống là SDE xử lý tốt không gian $M = 5$ chiều (crowding distance chỉ xét hai láng giềng trên từng chiều, kém hiệu quả khi $M$ lớn), và SDE không loại nhầm nghiệm biên nhờ cơ chế shift (Eq. 25) ưu tiên bảo tồn nghiệm tốt trên từng chiều riêng lẻ.
-
-Kết quả: sau pruning, $A_{\text{div}}$ giữ lại đúng $N_{\max}$ nghiệm phân bố **đồng đều nhất có thể** trên toàn bộ Pareto front — bao gồm cả các nghiệm extreme ở rìa mà $A_{\text{conv}}$ (tập trung vào vùng ROI) có thể đã bỏ qua.
-
 ### 9.5 Adaptive Archive Injection
 
-Dual archive không chỉ lưu trữ thụ động — nó tích cực **bơm nghiệm ngược lại quần thể** (inject) để dẫn hướng tìm kiếm. Mỗi thế hệ, thuật toán chọn một nghiệm từ $A_{\text{conv}}$ hoặc $A_{\text{div}}$ để bổ sung vào offspring pool. Câu hỏi then chốt là: **inject từ archive nào?** Inject từ $A_{\text{conv}}$ giúp tăng áp lực hội tụ về ROI — phù hợp khi thuật toán đang bế tắc và cần khai thác sâu vùng preference. Inject từ $A_{\text{div}}$ giúp tăng đa dạng — phù hợp khi thuật toán đang tiến triển tốt và cần duy trì khám phá rộng.
-
-Chúng tôi điều phối bằng **hàm sigmoid thích nghi** dựa trên chỉ số stagnation $s$ — số thế hệ liên tiếp mà best ASF không cải thiện:
+Sigmoid-based probability chuyển từ diversity → convergence khi stagnation:
 
 $$p_{\text{conv}} = \sigma\left(\frac{s}{5} - 2\right) = \frac{1}{1 + e^{-(s/5 - 2)}} \tag{57}$$
 
-Xác suất $p_{\text{conv}}$ là xác suất inject từ $A_{\text{conv}}$ (convergence archive); với xác suất $1 - p_{\text{conv}}$ thì inject từ $A_{\text{div}}$ (diversity archive). Hàm sigmoid có hình chữ S, chuyển đổi **mượt** giữa hai chế độ:
+trong đó $s$ = stagnation count.
 
-| $s$ (stagnation) | $p_{\text{conv}}$ | Hành vi |
+| $s$ | $p_{\text{conv}}$ | Ý nghĩa |
 |---|---|---|
-| 0 | 0.12 | Thuật toán đang tiến triển tốt → inject chủ yếu từ $A_{\text{div}}$ (88% diversity) để duy trì khám phá rộng |
-| 5 | 0.27 | Bắt đầu chậm lại → tăng nhẹ tỷ lệ convergence |
-| 10 | 0.50 | Bế tắc vừa → cân bằng hoàn toàn 50/50 giữa hai archive |
-| 20 | 0.88 | Bế tắc nặng → inject chủ yếu từ $A_{\text{conv}}$ (88% convergence) để khai thác sâu vùng ROI, hy vọng đột phá |
-
-Thiết kế hàm sigmoid với tham số $s/5 - 2$ tạo ra điểm chuyển pha (inflection point) tại $s = 10$: khi stagnation dưới 10 thế hệ, thuật toán ưu tiên đa dạng; khi stagnation vượt 10, ưu tiên chuyển dần sang hội tụ. Tốc độ chuyển đổi mượt mà (không nhảy bậc) tránh hiện tượng dao động (oscillation) giữa hai chế độ.
-
-Trong $A_{\text{conv}}$, nghiệm được inject là nghiệm có $\text{ASF}_{\text{aug}}$ thấp nhất — nghiệm gần preference nhất. Trong $A_{\text{div}}$, nghiệm được inject là nghiệm ngẫu nhiên — đảm bảo quần thể tiếp nhận thông tin từ các vùng khác nhau trên Pareto front. Nghiệm được inject tham gia cạnh tranh trong bước selection (NDS + SDE) như mọi offspring khác, không có ưu tiên đặc biệt — cơ chế chọn lọc đa mục tiêu sẽ tự quyết định nghiệm inject có đáng giữ hay không.
+| 0 | 0.12 | Chủ yếu inject diversity (khám phá) |
+| 5 | 0.27 | Cân bằng |
+| 10 | 0.50 | Cân bằng hoàn toàn |
+| 20 | 0.88 | Chủ yếu inject convergence (tập trung ROI) |
 
 ### 9.6 So sánh Single Archive vs Dual Archive
 
@@ -1440,80 +1303,46 @@ Output: Updated A_conv, A_div
 
 ## 10. Cơ chế Thích ứng (Adaptive Mechanisms)
 
-Các thành phần đã trình bày ở Mục 5–9 (chọn lọc, preference, SSO, ALNS, dual archive) tạo thành "bộ khung" của iNSSSO. Tuy nhiên, hiệu quả của chúng phụ thuộc mạnh vào các **tham số vận hành** — chuẩn hóa mục tiêu, tỷ lệ ALNS vs SSO, tốc độ đột biến — mà giá trị tối ưu thay đổi theo giai đoạn tìm kiếm và đặc thù instance. Nếu cố định tham số suốt quá trình chạy (static), thuật toán sẽ hoạt động tốt ở một giai đoạn nhưng kém ở giai đoạn khác. Mục này trình bày năm cơ chế thích ứng cho phép iNSSSO **tự điều chỉnh** tham số dựa trên phản hồi từ quá trình tiến hóa.
-
 ### 10.1 Adaptive Objective Normalisation
 
-Trong tối ưu đa mục tiêu, năm hàm mục tiêu $Z_1, \ldots, Z_5$ có thang giá trị rất khác nhau: ví dụ trên Solomon C101, $Z_1 \in [10, 25]$ (số xe), $Z_2 \in [800, 1400]$ (tổng khoảng cách), $Z_3 \in [0, 50]$ (thời gian chờ). Nếu không chuẩn hóa, mục tiêu có range lớn ($Z_2$) sẽ chi phối các phép tính khoảng cách trong SDE, crowding, và association với reference directions — dẫn đến chọn lọc mất cân bằng. Chuẩn hóa bằng ideal và nadir point đưa tất cả mục tiêu về cùng khoảng $[0, 1]$.
-
-Tuy nhiên, ideal và nadir **thay đổi liên tục** qua các thế hệ khi quần thể hội tụ dần (ideal cải thiện) hoặc khám phá vùng mới (nadir mở rộng). Chuẩn hóa cố định từ thế hệ đầu sẽ nhanh chóng lỗi thời. Chúng tôi cập nhật ideal và nadir **thích ứng** qua mỗi thế hệ:
-
-**Cập nhật ideal point.** Ideal point — vector chứa giá trị tốt nhất từng tìm được trên mỗi mục tiêu — chỉ được **cải thiện** (giảm, vì minimize), không bao giờ tăng:
+Cập nhật ideal/nadir qua các thế hệ bằng EMA (Exponential Moving Average):
 
 $$\text{ideal}_m(t) = \min(\text{ideal}_m(t-1), \min_{\mathbf{x} \in P(t)} f_m(\mathbf{x})) \tag{58}$$
 
-Toán tử $\min$ đảm bảo ideal point là "kỷ lục lịch sử" (historical best) trên mỗi chiều — một khi tìm được giá trị tốt hơn, không bao giờ quên. Đây là thiết kế monotone: ideal chỉ có thể tốt lên hoặc giữ nguyên, phản ánh tiến trình hội tụ tích lũy.
-
-**Cập nhật nadir point.** Nadir point — vector chứa giá trị tệ nhất trên Pareto front cho mỗi mục tiêu — khó ước lượng chính xác hơn ideal vì nó phụ thuộc vào hình dạng Pareto front hiện tại (có thể thay đổi khi phát hiện vùng mới). Thay vì lấy $\max$ đơn thuần (dễ bị nhiễu bởi outlier), chúng tôi sử dụng **Exponential Moving Average (EMA)**:
-
 $$\text{nadir}_m(t) = (1-\alpha) \cdot \text{nadir}_m(t-1) + \alpha \cdot \max_{\mathbf{x} \in P(t)} f_m(\mathbf{x}) \tag{59}$$
 
-Hệ số $\alpha = 0.1$ nghĩa là nadir mới kết hợp 90% ký ức từ thế hệ trước và 10% thông tin mới. EMA có tác dụng **làm mượt** (smoothing): nếu một thế hệ tình cờ có outlier với $f_m$ rất lớn, nadir chỉ dịch chuyển nhẹ thay vì nhảy vọt — tránh gây nhiễu cho chuẩn hóa. Đồng thời, EMA cho phép nadir **giảm dần** khi quần thể hội tụ (khác với ideal, nadir có thể tăng hoặc giảm), phản ánh đúng sự thu hẹp của Pareto front ước lượng.
+$\alpha = 0.1$ → smoothing, giảm outlier effect.
 
-**Chuẩn hóa mục tiêu.** Từ ideal và nadir đã cập nhật, mỗi giá trị mục tiêu được chuẩn hóa về khoảng gần $[0, 1]$:
+**Normalised objectives:**
 
 $$\hat{f}_m(\mathbf{x}) = \frac{f_m(\mathbf{x}) - \text{ideal}_m}{\text{nadir}_m - \text{ideal}_m + \varepsilon} \tag{60}$$
 
-trong đó $\varepsilon$ là hằng số nhỏ ($10^{-10}$) tránh chia cho 0 khi range bằng 0 (xảy ra nếu tất cả nghiệm có cùng giá trị trên một mục tiêu). Sau chuẩn hóa, $\hat{f}_m = 0$ ứng với giá trị ideal (tốt nhất lịch sử) và $\hat{f}_m \approx 1$ ứng với giá trị nadir (tệ nhất trên Pareto front). Giá trị chuẩn hóa $\hat{f}_m$ được sử dụng trong SDE (Eq. 24–27), association với reference directions (Eq. 32), và ROI check (Eq. 35) — đảm bảo tất cả phép so sánh đều công bằng giữa năm mục tiêu.
-
 ### 10.2 Stagnation Detection
-
-Stagnation (bế tắc) xảy ra khi thuật toán không còn khả năng cải thiện chất lượng lời giải qua nhiều thế hệ liên tiếp — dấu hiệu cho thấy quần thể đã hội tụ vào một vùng cục bộ và cần thay đổi chiến lược. Chúng tôi đo stagnation thông qua giá trị **Best ASF** — ASF nhỏ nhất trên Front 0 (xem Mục 6.1), phản ánh khoảng cách giữa nghiệm tốt nhất và reference point $\mathbf{g}$:
 
 $$\text{stagnation}(t) = \begin{cases} s(t-1) + 1 & \text{if } |\text{BestASF}(t) - \text{BestASF}(t-1)| < 10^{-6} \\ 0 & \text{otherwise} \end{cases} \tag{61}$$
 
-Bộ đếm stagnation $s(t)$ tăng thêm 1 mỗi khi Best ASF thay đổi ít hơn $10^{-6}$ (coi như không cải thiện), và **reset về 0** ngay khi có cải thiện đáng kể. Ngưỡng $10^{-6}$ được chọn đủ nhỏ để không bỏ sót cải thiện thực sự, nhưng đủ lớn để bỏ qua dao động do lỗi số (numerical noise). Giá trị $s(t)$ tại mỗi thời điểm phản ánh "mức độ bế tắc" hiện tại — con số này điều phối ba cơ chế thích ứng ở các mục tiếp theo: xác suất ALNS (Mục 10.3), archive injection (Mục 9.5, Eq. 57), và gián tiếp qua mutation rate (Mục 10.4).
-
 ### 10.3 ALNS Probability Adaptation
-
-Như đã trình bày ở Mục 8.5, mỗi cá thể có xác suất $n_{\text{abs}}$ được gửi qua ALNS (local search trên biểu diễn tuyến đường) thay vì Enhanced SSO (tìm kiếm trên không gian random-key). Tỷ lệ này ảnh hưởng trực tiếp đến cân bằng exploitation/exploration: ALNS khai thác cấu trúc tuyến đường hiện có (exploitation cục bộ), SSO khám phá vùng mới trong không gian liên tục (exploration toàn cục).
-
-Khi thuật toán tiến triển tốt ($s \leq 5$), SSO đang khám phá hiệu quả và không cần can thiệp — giữ nguyên tỷ lệ ALNS mặc định. Khi stagnation kéo dài ($s > 5$), SSO có dấu hiệu mắc kẹt — tăng tỷ lệ ALNS để "khuấy động" lời giải từ phía tổ hợp:
 
 $$n_{\text{abs}}(t) = \begin{cases} \min(0.5, n_{\text{abs}}^0 + 0.05 \cdot s(t)) & \text{if } s(t) > 5 \\ n_{\text{abs}}^0 & \text{otherwise} \end{cases} \tag{62}$$
 
-trong đó $n_{\text{abs}}^0 = 0.2$ là tỷ lệ ALNS ban đầu (mặc định 20%). Mỗi thế hệ stagnation thêm ($s > 5$), xác suất ALNS tăng thêm 5%, tối đa đến 50% — đảm bảo SSO vẫn chiếm ít nhất một nửa offspring (giữ exploration toàn cục). Ví dụ: khi $s = 10$, $n_{\text{abs}} = \min(0.5, 0.2 + 0.05 \times 10) = 0.5$, tức một nửa quần thể đi qua ALNS — tối đa hóa cơ hội destroy–repair phá vỡ cấu trúc cục bộ. Khi Best ASF cải thiện, $s$ reset về 0 và $n_{\text{abs}}$ trở về 0.2 — thuật toán tự động quay lại chế độ ưu tiên SSO exploration.
+Khi stagnation cao → tăng xác suất ALNS → khai thác local search nhiều hơn.
 
 ### 10.4 Mutation Rate Adaptation
 
-Polynomial mutation (Mục 10.5) tạo nhiễu loạn nhỏ trên vector random-key, giúp duy trì đa dạng gen trong quần thể. Tỷ lệ đột biến $\mu$ — xác suất mỗi gene (chiều) bị đột biến — được điều chỉnh tuyến tính theo tiến trình tìm kiếm:
-
 $$\mu(t) = 0.05 + 0.10 \cdot \frac{t}{T_{\max}} \tag{63}$$
 
-trong đó $t$ là thời gian đã trôi qua và $T_{\max}$ là tổng thời gian chạy. Công thức (63) tạo lịch trình đột biến tăng dần:
-
-- **Giai đoạn đầu** ($t/T_{\max} \approx 0$): $\mu \approx 5\%$ — tỷ lệ đột biến thấp, ưu tiên **exploitation**. Quần thể mới khởi tạo cần thời gian hội tụ, đột biến quá nhiều sẽ phá vỡ cấu trúc tốt đang hình thành từ các heuristic khởi tạo (CW, Solomon I1).
-- **Giai đoạn cuối** ($t/T_{\max} \approx 1$): $\mu \approx 15\%$ — tỷ lệ đột biến cao, ưu tiên **exploration**. Quần thể đã hội tụ đáng kể, đa dạng gen giảm, cần đột biến mạnh hơn để thoát cực trị cục bộ và khám phá vùng cuối cùng chưa thăm.
-
-Thiết kế tăng dần (linearly increasing) dựa trên quan sát phổ biến trong evolutionary computation: giai đoạn đầu cần hội tụ nhanh (low mutation), giai đoạn cuối cần phá vỡ stagnation (high mutation) [50]. Lịch trình tuyến tính đơn giản, dễ dự đoán, và không cần tham số phụ — phù hợp với triết lý "ít tham số nhất có thể" của iNSSSO.
+- Giai đoạn đầu ($t/T \approx 0$): $\mu \approx 5\%$ — exploitation
+- Giai đoạn cuối ($t/T \approx 1$): $\mu \approx 15\%$ — exploration
 
 ### 10.5 Vectorised Polynomial Mutation
 
-Polynomial mutation là toán tử đột biến kinh điển trong evolutionary multi-objective optimization, được sử dụng rộng rãi trong NSGA-II [7] và các biến thể sau này. Toán tử này tạo nhiễu loạn nhỏ quanh giá trị hiện tại, với phân phối có dạng đa thức (polynomial distribution) — phần lớn nhiễu rất nhỏ (gần giá trị gốc), nhưng thỉnh thoảng nhiễu lớn (nhảy xa hơn). Đặc tính này tương tự Lévy flight (Mục 7.3) nhưng ở quy mô vi mô (từng gene riêng lẻ).
-
-Cho gene $y = x_j \in [0, 1)$, lượng nhiễu loạn $\delta_q$ được sinh từ biến ngẫu nhiên $r \sim U(0,1)$:
+Cho $y = x_j \in [0, 1)$:
 
 $$\delta_q = \begin{cases} (2r + (1-2r)(1-y)^{\eta_m+1})^{1/(\eta_m+1)} - 1 & \text{if } r < 0.5 \\ 1 - (2(1-r) + 2(r-0.5)(1-y')^{\eta_m+1})^{1/(\eta_m+1)} & \text{otherwise} \end{cases} \tag{64}$$
 
-trong đó $y' = 1 - y$ là khoảng cách từ $y$ đến biên trên. Công thức có hai nhánh đối xứng: nhánh $r < 0.5$ sinh nhiễu âm (giảm giá trị), nhánh $r \geq 0.5$ sinh nhiễu dương (tăng giá trị). Giá trị gene sau đột biến:
-
 $$x_j^{\text{new}} = \text{clip}(x_j + \delta_q, 0, 0.999) \tag{65}$$
 
-Toán tử clip đảm bảo giá trị luôn nằm trong $[0, 0.999)$ — miền hợp lệ của random-key encoding. Biên trên 0.999 (thay vì 1.0) tránh trùng giá trị tại biên, đảm bảo argsort trong decode (Eq. 16) luôn cho thứ tự xác định duy nhất.
-
-**Tham số $\eta_m$ (distribution index).** Tham số $\eta_m = 20$ kiểm soát "hình dạng" phân phối nhiễu: $\eta_m$ lớn → phân phối tập trung quanh 0 (nhiễu nhỏ, exploitation); $\eta_m$ nhỏ → phân phối phẳng hơn (nhiễu lớn, exploration). Giá trị $\eta_m = 20$ là lựa chọn phổ biến trong cộng đồng EMO [7], tạo nhiễu chủ yếu nhỏ ($|\delta_q| < 0.05$ với xác suất > 90%) nhưng đôi khi nhảy xa ($|\delta_q| \approx 0.3$ với xác suất < 1%) — phù hợp với vai trò "tinh chỉnh" gene mà không phá vỡ cấu trúc tổng thể.
-
-**Vectorised implementation.** Trong triển khai, thay vì duyệt từng gene tuần tự ($d = n + K - 1$ gene), chúng tôi tạo mask ngẫu nhiên $\mathbf{m} \sim \text{Bernoulli}(\mu)$ cho toàn bộ vector, sinh $\delta_q$ cho tất cả gene được mask bằng phép toán NumPy vectorised, rồi cộng vào vector key một lần. Cách này tận dụng SIMD instructions và cache locality, đạt speedup khoảng 5–10× so với vòng lặp Python tuần tự — quan trọng khi mỗi thế hệ cần đột biến hàng trăm cá thể, mỗi cá thể có hàng trăm gene.
+$\eta_m = 20$ (distribution index), vectorised trên masked genes → speedup ~5-10×.
 
 ---
 

@@ -65,13 +65,41 @@ def load_preference(config: dict) -> UserPreference | None:
 
 
 def find_instance(data_dir: str, name: str, fmt: str = "csv") -> str:
-    """Find the file path for a given instance name."""
-    paths = find_solomon_instances(data_dir, fmt)
-    for p in paths:
-        base = os.path.splitext(os.path.basename(p))[0]
-        if base.upper() == name.upper():
-            return p
-    raise FileNotFoundError(f"Instance '{name}' not found in {data_dir}")
+    """Find the file path for a given instance name across known Solomon roots."""
+    repo_root = os.path.dirname(__file__)
+
+    # Prefer the configured directory/format, then fall back to the repository's
+    # bundled Solomon TXT/CSV layouts so CLI examples such as C101 work out of the box.
+    candidate_dirs = [
+        data_dir,
+        os.path.join(repo_root, "data", "csv"),
+        os.path.join(repo_root, "data", "txt"),
+        os.path.join(repo_root, "data", "txt", "100"),
+        os.path.join(repo_root, "data", "txt", "200"),
+        os.path.join(repo_root, "data", "txt", "400"),
+    ]
+    candidate_dirs = list(dict.fromkeys(os.path.abspath(d) for d in candidate_dirs))
+
+    candidate_formats = [fmt]
+    for alt_fmt in ("csv", "txt"):
+        if alt_fmt not in candidate_formats:
+            candidate_formats.append(alt_fmt)
+
+    searched = []
+    for root in candidate_dirs:
+        if not os.path.isdir(root):
+            continue
+        for current_fmt in candidate_formats:
+            searched.append(f"{root} (*.{current_fmt})")
+            for p in find_solomon_instances(root, current_fmt):
+                base = os.path.splitext(os.path.basename(p))[0]
+                if base.upper() == name.upper():
+                    return p
+
+    searched_str = "; ".join(searched) if searched else data_dir
+    raise FileNotFoundError(
+        f"Instance '{name}' not found. Searched: {searched_str}"
+    )
 
 
 # ===== Modes ================================================================
@@ -205,6 +233,7 @@ def mode_compare(args, config):
         n_runs=args.runs,
         time_limit=args.time,
         fmt=fmt,
+        preference=load_preference(config),
     )
     df = runner.run_comparison(instance)
     print("\n" + df.to_string(index=False))
@@ -225,6 +254,7 @@ def mode_full(args, config):
         n_runs=args.runs,
         time_limit=args.time,
         fmt=fmt,
+        preference=load_preference(config),
     )
     df = runner.full_solomon_benchmark()
     print(f"\nBenchmark complete. Results saved to {results_dir}/full_benchmark.csv")
