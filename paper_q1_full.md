@@ -82,6 +82,16 @@ Dựa trên phân tích tổng quan tài liệu (Section 2), chúng tôi xác đ
 
 ### 1.3 Đóng góp Chính (6 Contributions)
 
+**Các luận điểm cơ bản và đóng góp mới của đề án.**
+
+Hầu hết nghiên cứu hiện có về bài toán VRPTW chỉ tối ưu hai hoặc ba mục tiêu, trong khi thực tế logistics đòi hỏi cân nhắc đồng thời nhiều tiêu chí hơn. Khi nâng lên năm mục tiêu, bài toán thuộc lớp many-objective — các thuật toán đa mục tiêu truyền thống mất khả năng phân biệt nghiệm tốt xấu. Luận văn lấp đầy khoảng trống này bằng thuật toán lai iNSSSO, với ba đóng góp cốt lõi:
+
+- **Về mô hình:** Xây dựng mô hình VRPTW năm mục tiêu và chứng minh bằng thống kê rằng các mục tiêu thực sự xung đột, không thể rút gọn mà không mất thông tin.
+- **Về thuật toán:** Cải tiến SSO bằng Lévy flight và DE perturbation để khám phá hiệu quả hơn; tích hợp ALNS làm toán tử khai thác cấu trúc tuyến đường; sử dụng hệ dual-archive để cân bằng giữa hội tụ và đa dạng.
+- **Về tích hợp ưu tiên của người ra quyết định:** Xây dựng cơ chế cho phép người ra quyết định biểu đạt mức độ quan trọng của từng mục tiêu, từ đó hướng thuật toán tập trung tìm kiếm quanh vùng phương án mà họ thực sự quan tâm, thay vì dàn trải trên toàn bộ mặt Pareto. Các tham số ưu tiên được tự động hiệu chỉnh theo quá trình tiến hóa.
+
+Tính mới nằm ở việc kết hợp đồng thời các thành phần trên trong một khung thống nhất cho VRPTW many-objective — điều chưa có tiền lệ. Khung ablation study cho phép đánh giá độc lập đóng góp của từng thành phần. Các đóng góp cụ thể:
+
 1. **Mô hình MO-VRPTW 5 mục tiêu** (Section 3): Xây dựng mô hình toán học hoàn chỉnh với adaptive normalization và phân tích conflict bằng Spearman rank correlation [22], chứng minh 5 mục tiêu thực sự mâu thuẫn trên Solomon benchmarks.
 
 2. **Enhanced SSO với Lévy flight + DE/rand/1** (Section 7): Thay thế random exploration $U(0,1)$ của SSO gốc [13] bằng Lévy flight (heavy-tailed superdiffusion [23, 24, 25]) và DE perturbation (directed search [26, 27]), cải thiện cân bằng exploration-exploitation.
@@ -1464,7 +1474,9 @@ Hệ số $\alpha = 0.1$ nghĩa là nadir mới kết hợp 90% ký ức từ th
 
 $$\hat{f}_m(\mathbf{x}) = \frac{f_m(\mathbf{x}) - \text{ideal}_m}{\text{nadir}_m - \text{ideal}_m + \varepsilon} \tag{60}$$
 
-trong đó $\varepsilon$ là hằng số nhỏ ($10^{-10}$) tránh chia cho 0 khi range bằng 0 (xảy ra nếu tất cả nghiệm có cùng giá trị trên một mục tiêu). Sau chuẩn hóa, $\hat{f}_m = 0$ ứng với giá trị ideal (tốt nhất lịch sử) và $\hat{f}_m \approx 1$ ứng với giá trị nadir (tệ nhất trên Pareto front). Giá trị chuẩn hóa $\hat{f}_m$ được sử dụng trong SDE (Eq. 24–27), association với reference directions (Eq. 32), và ROI check (Eq. 35) — đảm bảo tất cả phép so sánh đều công bằng giữa năm mục tiêu.
+trong đó $\varepsilon$ là hằng số nhỏ ($10^{-10}$) tránh chia cho 0 khi range bằng 0 (xảy ra nếu tất cả nghiệm có cùng giá trị trên một mục tiêu). Sau chuẩn hóa, $\hat{f}_m = 0$ ứng với giá trị ideal (tốt nhất lịch sử) và $\hat{f}_m \approx 1$ ứng với giá trị nadir (tệ nhất trên Pareto front).
+
+**Phạm vi sử dụng.** Cần phân biệt rõ: ideal/nadir adaptive (Eq. 58–59) được sử dụng trực tiếp trong **ROI check** (Eq. 35) — nơi kích thước ellipsoid phụ thuộc vào biên độ $\text{nadir}_m - \text{ideal}_m$ và cần phản ánh tình trạng tổng thể qua nhiều thế hệ. Trong khi đó, các thành phần khác tự thực hiện chuẩn hóa cục bộ: **SDE** (Eq. 24–27) tính ideal/nadir riêng từ tập nghiệm trong cùng front (vì mật độ cần đo tương đối giữa các nghiệm cùng hạng, không phải so với toàn bộ lịch sử), và **association với reference directions** (Eq. 32) tính ideal/nadir từ toàn bộ quần thể hiện tại. Thiết kế này đảm bảo mỗi thành phần sử dụng mức chuẩn hóa phù hợp nhất với chức năng của nó.
 
 ### 10.2 Stagnation Detection
 
