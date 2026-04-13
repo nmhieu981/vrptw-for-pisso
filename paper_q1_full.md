@@ -67,6 +67,20 @@ Khi số mục tiêu $M \geq 4$ (gọi là **many-objective optimization** — M
 2. **Crowding Distance mất ý nghĩa:** Trong không gian $M$ chiều cao, CD không đo được mật độ chính xác. Li et al. [8] chứng minh rằng SDE (Shift-based Density Estimation) vượt trội CD khi $M \geq 4$.
 3. **Pareto front quá lớn:** DM không thể chọn giải pháp phù hợp từ hàng trăm, hàng ngàn solutions trải rộng trên PF [9]. Preference-based methods trở thành giải pháp thiết thực [10, 11].
 
+Ba khó khăn trên không chỉ là nhận định lý thuyết mà phản ánh trực tiếp vào hiệu năng của các thuật toán tối ưu đa mục tiêu tiêu biểu hiện có khi số mục tiêu tăng lên năm.
+
+NSGA-II [67] — thuật toán được sử dụng rộng rãi nhất trong lĩnh vực tối ưu đa mục tiêu — dựa hoàn toàn vào quan hệ trội Pareto để phân tầng quần thể và khoảng cách đám đông (Crowding Distance — CD) để phân biệt các nghiệm trong cùng tầng. Khi $M = 5$, cả hai cơ chế này đều suy yếu đồng thời: hiện tượng kháng trội (dominance resistance) đẩy gần như toàn bộ quần thể lên tầng trước nhất (Front 0), khiến việc phân tầng mất ý nghĩa; trong khi đó, khoảng cách đám đông — vốn được tính bằng tổng khoảng cách trên từng chiều mục tiêu riêng lẻ — tiến dần về một hằng số cho mọi nghiệm do hiệu ứng tích luỹ thống kê trong không gian nhiều chiều [8]. Kết quả là quá trình chọn lọc trở nên gần như ngẫu nhiên, không còn phân biệt được nghiệm tốt xấu.
+
+SPEA2 [70] cải tiến phần nào bằng cách thay khoảng cách đám đông bằng mật độ láng giềng gần nhất thứ $k$ (k-NN density) và bổ sung giá trị sức mạnh (strength) đo số nghiệm mà mỗi cá thể trội hơn. Tuy nhiên, chính hiện tượng kháng trội lại vô hiệu hoá thành phần sức mạnh: khi hầu như không cặp nghiệm nào so sánh được theo quan hệ Pareto, giá trị sức mạnh của phần lớn cá thể đồng loạt tiến về 0 và toàn bộ áp lực chọn lọc dồn lên mật độ k-NN — một đại lượng cũng mất khả năng phân biệt trong không gian nhiều chiều do hiện tượng tập trung khoảng cách (concentration of measure). Lúc này SPEA2 thực chất chỉ chọn theo tính đa dạng mà đánh mất hoàn toàn sức ép hướng về hội tụ.
+
+MOEA/D [68] đi theo hướng khác: tránh được hiện tượng kháng trội bằng cách phân rã bài toán nhiều mục tiêu thành $N$ bài toán con đơn mục tiêu thông qua hàm gộp Tchebycheff, mỗi bài toán con gắn với một véc-tơ trọng số trên đơn hình (simplex). Nhờ đó, mỗi bài toán con có thứ tự toàn phần và áp lực chọn lọc được duy trì. Thế nhưng, cách phân rã cố định này bộc lộ hạn chế riêng khi $M$ tăng: lưới véc-tơ trọng số trên đơn hình $(M{-}1)$ chiều hoặc phải rất dày — kéo theo kích thước quần thể quá lớn — hoặc quá thưa dẫn đến bỏ sót nhiều vùng đánh đổi quan trọng. Hơn nữa, phân rã đều đặn không thích ứng được với mặt Pareto có hình dạng bất quy tắc — điều rất phổ biến trong bài toán VRPTW do mục tiêu số xe ($Z_1$) mang giá trị rời rạc. Cấu trúc lân cận cố định giữa các bài toán con cũng hạn chế việc trao đổi thông tin giữa các vùng không gian tìm kiếm có đặc tính khác nhau (khách hàng phân cụm so với khách hàng phân bố ngẫu nhiên).
+
+MOPSO [69] mang lại khả năng dò tìm nhờ cơ chế bầy đàn, song phép cập nhật vận tốc kéo các hạt theo hướng tuyến tính về phía nghiệm tốt nhất cá nhân và nghiệm tốt nhất toàn cục. Trên bề mặt tìm kiếm lồi lõm phức tạp của bài toán VRPTW với nhiều ràng buộc, điều này dẫn đến hiện tượng hội tụ sớm — các hạt nhanh chóng tụ lại quanh vài vùng cục bộ mà không thể thoát ra. Bên cạnh đó, kho lưu trữ ngoài (external archive) phải đồng thời gánh hai vai trò mâu thuẫn: vừa cung cấp nghiệm dẫn đường chất lượng cao (đòi hỏi hội tụ tốt), vừa duy trì sự đa dạng của tập nghiệm. Việc dồn hai mục đích đối lập vào một cấu trúc duy nhất khiến cả hai đều không được đáp ứng thoả đáng.
+
+Ngoài những hạn chế đặc thù của từng thuật toán, cả bốn phương pháp đều chia sẻ **hai khoảng trống chung** khi áp dụng cho bài toán VRPTW rất nhiều mục tiêu. Thứ nhất, không phương pháp nào có **cơ chế tích hợp ưu tiên** cho phép người ra quyết định chỉ định vùng quan tâm trên mặt Pareto — tất cả đều dàn trải nguồn lực tính toán đều khắp mặt Pareto, trong khi người ra quyết định trong thực tế chỉ cần một vùng nhỏ phù hợp với chiến lược kinh doanh cụ thể. Thứ hai, tất cả đều là phương pháp mục đích chung (general-purpose), chỉ sử dụng toán tử tìm kiếm liên tục mà **không khai thác cấu trúc tuyến đường** đặc thù của bài toán VRPTW — trong khi tổng quan toàn diện nhất hiện nay về tìm kiếm lân cận lớn thích ứng của Türkeş và cộng sự [18] cho thấy các toán tử phá huỷ–sửa chữa chuyên biệt mang lại cải thiện đáng kể cho các biến thể VRP.
+
+Từ những phân tích trên, có thể rút ra kết luận rằng việc giải quyết bài toán VRPTW rất nhiều mục tiêu ($M = 5$) đòi hỏi một khung thuật toán có khả năng **đồng thời**: (i) duy trì áp lực chọn lọc hiệu quả bất chấp hiện tượng kháng trội, (ii) khai thác cấu trúc tổ hợp của hệ thống tuyến đường, (iii) hướng quá trình tìm kiếm về vùng mà người ra quyết định quan tâm, và (iv) cân bằng giữa khám phá toàn cục và khai thác cục bộ trên bề mặt tìm kiếm phức tạp. Không thuật toán tiêu biểu nào trong số đã khảo sát đáp ứng được đồng thời cả bốn yêu cầu này — và chính khoảng trống đó tạo nên động lực cho thuật toán iNSSSO được đề xuất trong nghiên cứu này.
+
 ### 1.2 Khoảng trống Nghiên cứu (Research Gaps)
 
 Dựa trên phân tích tổng quan tài liệu (Section 2), chúng tôi xác định 6 khoảng trống nghiên cứu chính:
@@ -261,6 +275,91 @@ Clarke & Wright [63] (1964) đề xuất savings heuristic kinh điển. Gần �
 | Preference MaO | [10, 11, 31, 54] | Chưa áp dụng cho VRPTW | G3 → C5 |
 | Dual archive | [20, 21, 43] | Chỉ benchmark functions | G5 → C4 |
 | SDE | [8, 44] | Chưa kết hợp với R-dominance cho routing | G6 → C1 |
+
+### 2.12 Phân tích hạn chế của các thuật toán tối ưu đa mục tiêu tiêu biểu trong bối cảnh rất nhiều mục tiêu
+
+Trước khi trình bày thuật toán đề xuất, phần này phân tích có hệ thống các hạn chế cố hữu của bốn thuật toán tối ưu đa mục tiêu tiêu biểu — NSGA-II, MOEA/D, MOPSO và SPEA2 — khi đối mặt với bài toán VRPTW rất nhiều mục tiêu ($M = 5$). Cần nhấn mạnh rằng phân tích này không nhằm phủ nhận giá trị của các thuật toán nói trên trong bối cảnh chúng được thiết kế (hai đến ba mục tiêu, các bài toán chuẩn liên tục), mà nhằm chỉ ra rằng **không thuật toán nào trong số này giải quyết đồng thời** bốn thách thức đặc thù: (i) áp lực chọn lọc suy giảm khi số mục tiêu tăng, (ii) thiếu khai thác cấu trúc tuyến đường, (iii) thiếu cơ chế tích hợp ưu tiên cho người ra quyết định, và (iv) cân bằng giữa khám phá toàn cục và khai thác cục bộ trên bề mặt tìm kiếm phức tạp. Chính bốn khoảng trống đồng thời này tạo động lực cho khung thuật toán iNSSSO được đề xuất ở Phần II.
+
+#### 2.12.1 NSGA-II — Suy yếu áp lực chọn lọc trong không gian mục tiêu cao
+
+NSGA-II [67] (Deb và cộng sự, 2002) là thuật toán tối ưu đa mục tiêu được sử dụng rộng rãi nhất, dựa trên hai cơ chế: sắp xếp không trội nhanh (Fast Non-dominated Sorting) phân quần thể thành các tầng theo quan hệ trội Pareto, và khoảng cách đám đông (Crowding Distance — CD) phân biệt các nghiệm trong cùng tầng. Khi số mục tiêu $M \leq 3$, cả hai cơ chế hoạt động hiệu quả. Tuy nhiên, khi nâng lên $M = 5$, cả hai đều suy giảm nghiêm trọng.
+
+**Hiện tượng kháng trội — mất áp lực chọn lọc.** Theo kết quả lý thuyết của Fleischer (2003), xác suất một nghiệm ngẫu nhiên không bị trội trong quần thể $N$ với $M$ mục tiêu là:
+
+$$P(\text{không bị trội}) \approx \frac{(\ln N)^{M-1}}{(M-1)! \cdot N}$$
+
+Với $N = 100$ và $M = 5$, tỷ lệ này đạt khoảng 80–90 phần trăm: gần như toàn bộ quần thể nằm trên tầng trước nhất. Khi đó việc sắp xếp không trội không còn phân biệt được nghiệm tốt xấu — chọn lọc giữa các tầng trở nên vô nghĩa, và toàn bộ áp lực dồn lên khoảng cách đám đông. Đây là hiện tượng kháng trội [6] — hệ quả tất yếu khi quan hệ Pareto phải so sánh đồng thời trên quá nhiều chiều.
+
+**Khoảng cách đám đông mất hiệu lực trong không gian nhiều chiều.** Khoảng cách đám đông tính mật độ bằng cách xử lý từng chiều mục tiêu **riêng lẻ** rồi cộng lại: $CD(i) = \sum_{m=1}^{M} CD_m(i)$. Mỗi $CD_m(i)$ đo khoảng cách đến hai nghiệm liền kề trên chiều $m$, không xét mối quan hệ đồng thời giữa các chiều. Khi $M$ lớn, theo định lý giới hạn trung tâm, tổng $M$ đại lượng xấp xỉ độc lập hội tụ về hằng số cho mọi nghiệm — hệ quả là khoảng cách đám đông cho giá trị gần bằng nhau đối với tất cả cá thể trong tầng trước nhất [8]. Hai nghiệm có thể rất gần nhau trong không gian $M$ chiều nhưng khoảng cách đám đông vẫn cho giá trị cao vì chúng tình cờ cách xa trên một vài chiều riêng lẻ. Li và cộng sự [8] đã chứng minh thực nghiệm rằng khoảng cách đám đông thất bại rõ rệt khi $M \geq 4$, và đề xuất ước lượng mật độ dựa trên phép dịch (SDE) thay thế — chính là cơ chế được iNSSSO kế thừa và phát triển.
+
+**Thiếu cơ chế tích hợp ưu tiên.** NSGA-II tìm toàn bộ mặt Pareto mà không phân biệt vùng nào người ra quyết định quan tâm. Khi $M = 5$, mặt Pareto trải rộng trên không gian bốn chiều, chứa hàng trăm đến hàng ngàn nghiệm. Người ra quyết định không thể chọn phương án phù hợp từ tập quá lớn này [9], và phần lớn nghiệm trên mặt Pareto không có giá trị thực tiễn.
+
+**Thiếu tìm kiếm cục bộ trên cấu trúc tổ hợp.** NSGA-II chỉ sử dụng lai ghép nhị phân mô phỏng (SBX) và đột biến đa thức — các toán tử tổng quát không khai thác cấu trúc tuyến đường đặc thù của bài toán VRPTW. Các phép cải thiện cục bộ rất hiệu quả cho VRP (di chuyển khách hàng, hoán đổi, đảo đoạn, dịch chuỗi) hoàn toàn vắng mặt, khiến khả năng khai thác cục bộ kém.
+
+#### 2.12.2 MOEA/D — Phân rã cứng nhắc, không thích ứng với mặt Pareto bất quy tắc
+
+MOEA/D [68] (Zhang và Li, 2007) tiếp cận theo hướng hoàn toàn khác: phân rã bài toán nhiều mục tiêu thành $N$ bài toán con đơn mục tiêu bằng hàm gộp Tchebycheff (công thức 66), mỗi bài toán con gắn với một véc-tơ trọng số trên đơn hình. Ưu điểm là tránh được hiện tượng kháng trội (vì mỗi bài toán con có thứ tự toàn phần), nhưng phương pháp này bộc lộ những hạn chế riêng khi đối mặt với bài toán VRPTW rất nhiều mục tiêu.
+
+**Phân bố véc-tơ trọng số kém hiệu quả khi số mục tiêu lớn.** Số véc-tơ trọng số cần thiết để phủ đều đơn hình $(M-1)$ chiều tăng theo tổ hợp $\binom{p+M-1}{M-1}$, trong đó $p$ là tham số phân chia. Với $M = 5$, để đạt độ phủ tương đương trường hợp $M = 2$ cần lượng véc-tơ lớn hơn nhiều lần, kéo theo kích thước quần thể quá lớn và chi phí tính toán tăng. Ngược lại, giữ quần thể nhỏ ($N = 100$) buộc phải dùng $p$ thấp ($p = 4$, cho 70 véc-tơ), dẫn đến lưới phủ thưa và bỏ sót nhiều vùng đánh đổi quan trọng.
+
+**Không thích ứng với hình dạng mặt Pareto thực tế.** Phân rã Tchebycheff hoạt động tốt nhất khi mặt Pareto có dạng tương đối **đều đặn** và **liên thông**. Với bài toán VRPTW năm mục tiêu, mặt Pareto thường có hình dạng **bất quy tắc** — đặc biệt do mục tiêu số xe ($Z_1$) mang giá trị rời rạc (số nguyên), tạo ra mặt Pareto dạng "bậc thang" trên chiều này. Trên các bộ dữ liệu nhóm C1 của Solomon với cửa sổ thời gian hẹp, mặt Pareto có thể **không liên thông**. Phân rã theo lưới cố định không thích ứng được — nhiều véc-tơ trọng số rơi vào vùng không khả thi, trong khi vùng mặt Pareto tập trung lại thiếu véc-tơ.
+
+**Cấu trúc lân cận quá cứng nhắc.** Mỗi bài toán con chỉ trao đổi thông tin với $T$ láng giềng gần nhất trong không gian véc-tơ trọng số. Với bài toán VRPTW trên các bộ dữ liệu Solomon, bề mặt tìm kiếm thay đổi mạnh giữa các vùng: khách hàng phân cụm (nhóm C) tạo bề mặt khác biệt hoàn toàn so với khách hàng phân bố ngẫu nhiên (nhóm R). Cấu trúc lân cận cố định không cho phép thông tin lan truyền giữa các vùng xa nhau trên mặt Pareto, hạn chế khả năng khám phá toàn cục.
+
+**Thiếu cơ chế ưu tiên tường minh.** Mặc dù véc-tơ trọng số ngầm mã hoá các hướng đánh đổi, MOEA/D không cho phép người ra quyết định **chỉ định vùng quan tâm** hay **điều chỉnh ưu tiên** theo thời gian thực. Tất cả các hướng được phân bổ nguồn lực tính toán bình đẳng, trong khi người ra quyết định trong thực tế thường chỉ quan tâm đến một vùng nhỏ trên mặt Pareto — phần lớn nỗ lực tính toán bị lãng phí.
+
+**Thiếu cơ chế cân bằng hội tụ–đa dạng tường minh.** MOEA/D tối ưu từng bài toán con gần như độc lập, chỉ chia sẻ thông tin qua cấu trúc lân cận. Không có cơ chế tường minh nào đảm bảo **tính đa dạng tổng thể** của tập nghiệm cuối cùng. Ishibuchi và cộng sự [6] đã chứng minh rằng đây là thế tiến thoái lưỡng nan giữa hội tụ và đa dạng (convergence-diversity dilemma): chọn lọc đơn tiêu chí không thể đồng thời tối ưu cả hội tụ lẫn đa dạng khi số mục tiêu lớn. MOEA/D có xu hướng **nghiêng về hội tụ** — mỗi bài toán con tối ưu giá trị gộp của riêng mình mà bỏ qua mối quan hệ giữa các nghiệm lân cận.
+
+#### 2.12.3 MOPSO — Hội tụ sớm và quản lý kho lưu trữ yếu
+
+MOPSO [69] (Coello và cộng sự, 2004) mở rộng thuật toán tối ưu bầy đàn (PSO) cho bài toán đa mục tiêu, trong đó mỗi hạt cập nhật vận tốc dựa trên nghiệm tốt nhất cá nhân ($pbest$) và nghiệm tốt nhất toàn cục ($gbest$) được chọn từ kho lưu trữ ngoài (công thức 67–68).
+
+**Hội tụ sớm trên bề mặt tìm kiếm phức tạp.** Cơ chế cập nhật vận tốc kéo toàn bộ quần thể về phía $pbest$ và $gbest$ theo lực hấp dẫn tuyến tính. Với bài toán VRPTW năm mục tiêu — nơi bề mặt tìm kiếm rất lồi lõm do ràng buộc sức chứa và cửa sổ thời gian tạo ra nhiều cực trị địa phương — các hạt nhanh chóng tụ lại quanh vài vùng hẹp. Thuật toán thiếu cơ chế khám phá đuôi nặng (như bước nhảy Lévy) để thực hiện các bước nhảy lớn thoát khỏi cực trị cục bộ. Phép nhiễu loạn tiến hoá vi phân cũng vắng mặt, khiến không có cơ chế tìm kiếm có hướng bổ sung cho quá trình khám phá mù.
+
+**Kho lưu trữ ngoài được quản lý thô sơ.** MOPSO lưu trữ các nghiệm không bị trội trong kho lưu trữ ngoài có kích thước giới hạn. Khi kho đầy, phương pháp cắt tỉa phổ biến nhất dựa trên khoảng cách đám đông — gặp đúng vấn đề đã phân tích ở NSGA-II khi $M = 5$. Hơn nữa, MOPSO sử dụng **một kho lưu trữ duy nhất** phải đồng thời phục vụ hai mục đích mâu thuẫn: cung cấp nghiệm dẫn đường chất lượng cao (đòi hỏi hội tụ tốt) và duy trì tính đa dạng (đòi hỏi trải rộng trên mặt Pareto). Không có cơ chế **kho lưu trữ kép** để tách biệt hai vai trò này.
+
+**Việc chọn nghiệm dẫn đường toàn cục mất ý nghĩa khi số mục tiêu cao.** Với $M = 5$, gần như toàn bộ kho lưu trữ đều là nghiệm không bị trội (do hiện tượng kháng trội). Việc chọn $gbest$ — thường bằng vòng quay ru-lét dựa trên khoảng cách đám đông — trở thành gần ngẫu nhiên. Các hạt được "hướng dẫn" bởi các nghiệm dẫn đường không thực sự tốt hơn bản thân chúng, dẫn đến quá trình tìm kiếm thiếu định hướng và lãng phí số lần đánh giá hàm mục tiêu.
+
+**Thiếu khai thác cấu trúc tổ hợp.** Phép cập nhật vận tốc là toán tử liên tục thuần tuý. Toán tử này không khai thác **cấu trúc tuyến đường** của bài toán VRPTW: các phép cải thiện cục bộ hiệu quả cho VRP (di chuyển khách hàng giữa tuyến, hoán đổi, đảo đoạn trong tuyến, dịch chuỗi) không thể biểu diễn qua phép cộng véc-tơ đơn giản. Điều này khiến MOPSO có khả năng khám phá nhưng **khai thác cục bộ rất yếu** trên cấu trúc bài toán.
+
+#### 2.12.4 SPEA2 — Giá trị sức mạnh suy giảm và chi phí tính toán không tương xứng
+
+SPEA2 [70] (Zitzler và cộng sự, 2001) sử dụng hàm thích nghi kết hợp hai thành phần: **giá trị sức mạnh** (strength — số nghiệm mà mỗi cá thể trội hơn) phản ánh tính hội tụ, và **mật độ láng giềng gần nhất thứ $k$** (k-NN density) phản ánh tính đa dạng (công thức 69). Gần đây, nghiên cứu tại IJCAI 2025 [61] chứng minh SPEA2 có bảo đảm xấp xỉ lý thuyết tốt hơn NSGA-II. Tuy nhiên, khi áp dụng cho bài toán VRPTW rất nhiều mục tiêu, cả hai thành phần đều suy giảm.
+
+**Giá trị sức mạnh mất khả năng phân biệt.** Khi $M = 5$, hiện tượng kháng trội khiến rất ít cặp nghiệm so sánh được theo quan hệ Pareto — hầu hết các cặp là không so sánh được. Hệ quả trực tiếp: giá trị sức mạnh của phần lớn nghiệm xấp xỉ bằng 0 (vì gần như không ai bị trội bởi ai), phần sức mạnh trong hàm thích nghi trở nên đồng nhất. Toàn bộ áp lực chọn lọc dồn lên phần mật độ k-NN — biến SPEA2 thực chất thành thuật toán **chỉ dựa trên tính đa dạng** mà đánh mất hoàn toàn sức ép hướng về hội tụ. Đây là nghịch lý: thành phần được thiết kế để đảm bảo hội tụ (giá trị sức mạnh) lại bị vô hiệu hoá hoàn toàn.
+
+**Mật độ k-NN mất ý nghĩa trong không gian nhiều chiều.** Mật độ k-NN đo khoảng cách Euclid đến láng giềng thứ $k = \lfloor\sqrt{N}\rfloor$ trong không gian mục tiêu $\mathbb{R}^M$. Trong không gian nhiều chiều, hiện tượng **tập trung khoảng cách** (concentration of measure) khiến khoảng cách Euclid giữa mọi cặp điểm ngẫu nhiên hội tụ về cùng một giá trị — mật độ k-NN không còn phân biệt được vùng thưa và vùng đặc. Khác với ước lượng mật độ dựa trên phép dịch SDE (công thức 25–27) — vốn tích hợp thông tin hội tụ qua phép dịch toạ độ — mật độ k-NN đo mật độ thuần tuý, không xét nghiệm nào tốt hơn nghiệm nào trên từng chiều.
+
+**Thiên lệch khi cắt tỉa kho lưu trữ tại biên mặt Pareto.** Khi kho lưu trữ ngoài đầy, SPEA2 lần lượt loại nghiệm có mật độ k-NN nhỏ nhất (gần hàng xóm nhất). Trong $M$ chiều cao, phương pháp này có xu hướng loại nghiệm ở **biên** mặt Pareto — nơi mật độ tự nhiên thấp do ít nghiệm lân cận — chính là những nghiệm đại diện cho các **kiểu đánh đổi cực đoan** mà người ra quyết định có thể quan tâm (ví dụ: nghiệm dùng rất ít xe nhưng quãng đường dài, hoặc nghiệm cân bằng tải hoàn hảo nhưng thời gian hoàn thành cao).
+
+**Chi phí tính toán cao không tương xứng.** Độ phức tạp $O(N^2 M + N^2 \log N)$ — phần $N^2 \log N$ đến từ việc sắp xếp khoảng cách cho k-NN trên toàn bộ quần thể. Với quần thể lớn, chi phí này đáng kể nhưng **không mang lại lợi ích tương xứng** khi số mục tiêu cao: ước lượng mật độ đã mất hiệu lực (như phân tích trên), nên chi phí bỏ ra không cải thiện chất lượng chọn lọc.
+
+#### 2.12.5 Tổng hợp hạn chế và động lực cho thuật toán đề xuất
+
+Bảng dưới đây tổng hợp hạn chế của bốn thuật toán và cách iNSSSO được thiết kế để giải quyết từng hạn chế:
+
+| Hạn chế | NSGA-II | MOEA/D | MOPSO | SPEA2 | Giải pháp trong iNSSSO |
+|---|:---:|:---:|:---:|:---:|---|
+| Kháng trội ($M=5$) | Nặng | — | Nặng | Nặng | Quan hệ trội R (§6.3): thành viên vùng quan tâm + so sánh hàm ASF → giảm tỷ lệ nghiệm không bị trội từ khoảng 85% xuống khoảng 15% |
+| Ước lượng mật độ thất bại | Khoảng cách đám đông sụp đổ | — | Khoảng cách đám đông sụp đổ | k-NN suy giảm | SDE véc-tơ hoá (§5.2): phép dịch kết hợp hội tụ và đa dạng trong $O(N^2 M)$ |
+| Thiếu cân bằng hội tụ–đa dạng | Không tường minh | Nghiêng hội tụ | Nghiêng hội tụ sớm | Nghiêng đa dạng | Kho lưu trữ kép (§9): $A_{\text{conv}}$ (ε-trội + ASF) + $A_{\text{div}}$ (Pareto + SDE) |
+| Phủ đơn hình kém ($M$ chiều) | Không có | Véc-tơ trọng số cứng nhắc | Không có | Không có | Phân vùng Das-Dennis + 70% hướng thiên về ưu tiên (§5.3) |
+| Thiếu cơ chế ưu tiên | Không | Không | Không | Không | ASF + Vùng quan tâm + Quan hệ trội R + tự hiệu chỉnh (§6) |
+| Thiếu tìm kiếm cục bộ trên cấu trúc VRP | Không | Không | Không | Không | ALNS: 5 toán tử phá huỷ + 4 toán tử sửa chữa, chọn thích ứng vòng quay ru-lét (§8) |
+| Khám phá hạn chế | Đột biến yếu | Lân cận hẹp | Hội tụ sớm | Đột biến yếu | Bước nhảy Lévy (đuôi nặng) + DE/rand/1 (có hướng) (§7) |
+| Tham số cố định | Có | Có | Có | Có | $n_{\text{abs}}$ thích ứng, $\varepsilon$ thích ứng, phát hiện trì trệ (§10) |
+
+Phân tích trên cho thấy **bốn thách thức cốt lõi** mà không thuật toán nào trong số NSGA-II, MOEA/D, MOPSO, SPEA2 giải quyết đồng thời:
+
+1. **Áp lực chọn lọc suy giảm khi $M = 5$.** Cả các phương pháp dựa trên quan hệ trội Pareto (NSGA-II, MOPSO, SPEA2) lẫn phương pháp phân rã (MOEA/D) đều gặp khó khăn — hoặc vì hiện tượng kháng trội, hoặc vì véc-tơ trọng số phủ thưa. iNSSSO kết hợp **ba tầng chọn lọc** (sắp xếp không trội → SDE → phân vùng theo hướng tham chiếu) với **quan hệ trội R** để duy trì áp lực chọn lọc mạnh ngay cả khi $M = 5$.
+
+2. **Thiếu khai thác cấu trúc bài toán VRPTW.** Cả bốn thuật toán đều là phương pháp mục đích chung, chỉ sử dụng các toán tử tìm kiếm liên tục (lai ghép, đột biến, cập nhật vận tốc). Không thuật toán nào có toán tử chuyên biệt cho cấu trúc tuyến đường — trong khi tổng quan của Türkeş và cộng sự [18] cho thấy tìm kiếm cục bộ chuyên biệt mang lại cải thiện 10–20% trên các bài toán VRP. iNSSSO tích hợp **khung tìm kiếm lân cận lớn thích ứng (ALNS)** với 9 toán tử phá huỷ và sửa chữa được thiết kế riêng cho VRPTW, kết hợp cơ chế chấm điểm thích ứng theo Ropke và Pisinger [17].
+
+3. **Không hướng tìm kiếm về vùng người ra quyết định quan tâm.** Cả bốn thuật toán đều tìm toàn bộ mặt Pareto, tạo ra tập nghiệm quá lớn mà phần lớn không hữu ích. Trong bối cảnh logistics thực tế — nơi người ra quyết định thường có ưu tiên rõ ràng (ví dụ: ưu tiên giảm số xe hơn giảm thời gian hoàn thành) — đây là lãng phí nguồn lực tính toán nghiêm trọng. iNSSSO xây dựng **khung tích hợp ưu tiên hoàn chỉnh** (hàm gộp thành tựu ASF + vùng quan tâm ROI + quan hệ trội R) cho phép người ra quyết định biểu đạt ưu tiên và nhận lại tập nghiệm tập trung quanh vùng họ quan tâm.
+
+4. **Mất cân bằng giữa khám phá và khai thác trên bề mặt tìm kiếm phức tạp.** Đột biến ngẫu nhiên (NSGA-II, SPEA2) quá yếu để thoát cực trị cục bộ, cập nhật vận tốc (MOPSO) dẫn đến hội tụ sớm, tìm kiếm lân cận (MOEA/D) quá hẹp cho bề mặt đa dạng. iNSSSO kết hợp **bước nhảy Lévy** (siêu khuếch tán đuôi nặng cho khám phá vĩ mô) với **nhiễu loạn tiến hoá vi phân DE/rand/1** (tìm kiếm có hướng) và **ALNS** (khai thác cấu trúc tuyến đường), tạo nên cơ chế cân bằng khám phá–khai thác ba tầng.
+
+Chính việc giải quyết **đồng thời** bốn thách thức trên trong một khung thống nhất — điều chưa có tiền lệ trong nghiên cứu VRPTW rất nhiều mục tiêu — tạo nên động lực và tính mới cho thuật toán iNSSSO được trình bày trong các phần tiếp theo.
 
 ---
 
