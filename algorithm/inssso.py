@@ -92,7 +92,7 @@ class DualArchive:
     dilemma" in many-objective optimization (Ishibuchi et al., 2017).
     """
 
-    def __init__(self, max_size: int = 200, epsilon: float = 0.001,
+    def __init__(self, max_size: int = 200, epsilon: float = 0.01,
                  pref: Optional[UserPreference] = None):
         self.max_size = max_size
         self.epsilon = epsilon
@@ -103,8 +103,37 @@ class DualArchive:
         # Diversity archive (spread-driven)
         self.div_archive: List[Solution] = []
 
+        # Adaptive epsilon: scaled per-objective once we see data
+        self._obj_ranges: Optional[np.ndarray] = None
+        self._eps_vector: Optional[np.ndarray] = None
+
+    def _update_eps_vector(self, obj: np.ndarray) -> None:
+        """Update per-objective epsilon vector from observed ranges."""
+        if self._obj_ranges is None:
+            self._obj_ranges = np.zeros((2, len(obj)))
+            self._obj_ranges[0] = obj  # min
+            self._obj_ranges[1] = obj  # max
+        else:
+            self._obj_ranges[0] = np.minimum(self._obj_ranges[0], obj)
+            self._obj_ranges[1] = np.maximum(self._obj_ranges[1], obj)
+        ranges = self._obj_ranges[1] - self._obj_ranges[0]
+        ranges = np.where(ranges < 1e-10, 1.0, ranges)
+        self._eps_vector = self.epsilon * ranges
+
     def _eps_box(self, obj: np.ndarray) -> np.ndarray:
+        self._update_eps_vector(obj)
+        if self._eps_vector is not None:
+            return np.floor(obj / (self._eps_vector + 1e-15))
         return np.floor(obj / (self.epsilon + 1e-15))
+
+    @staticmethod
+    def _is_duplicate(obj: np.ndarray, archive: List[Solution],
+                      tol: float = 1e-6) -> bool:
+        """Check if an objective vector already exists in the archive."""
+        for member in archive:
+            if np.allclose(obj, np.array(member.objectives), atol=tol, rtol=0):
+                return True
+        return False
 
     def update(self, candidates: List[Solution]) -> None:
         """Update both archives with new candidates."""
@@ -153,6 +182,9 @@ class DualArchive:
         """Pareto-dominance insertion for diversity archive (no ε-boxing)."""
         obj = np.array(sol.objectives)
 
+        if self._is_duplicate(obj, self.div_archive):
+            return
+
         to_remove = []
         for i, member in enumerate(self.div_archive):
             m_obj = np.array(member.objectives)
@@ -192,7 +224,7 @@ class DualArchive:
         """
         Get solutions from archive.
         mode: "conv" | "div" | "combined"
-        Combined returns non-dominated merge of both archives.
+        Combined returns non-dominated, deduplicated merge of both archives.
         """
         if mode == "conv":
             return list(self.conv_archive)
@@ -204,9 +236,29 @@ class DualArchive:
                 return []
             objs = np.array([s.objectives for s in all_sols])
             fronts = fast_nondominated_sort(objs)
-            if fronts:
-                return [all_sols[i] for i in fronts[0]]
-            return all_sols
+            if not fronts:
+                return all_sols
+            pf_sols = [all_sols[i] for i in fronts[0]]
+            return self._deduplicate(pf_sols)
+
+    @staticmethod
+    def _deduplicate(solutions: List[Solution], tol: float = 1e-6) -> List[Solution]:
+        """Remove solutions with near-identical objective vectors."""
+        if not solutions:
+            return solutions
+        unique: List[Solution] = []
+        seen_objs: List[np.ndarray] = []
+        for sol in solutions:
+            obj = np.array(sol.objectives)
+            is_dup = False
+            for s_obj in seen_objs:
+                if np.allclose(obj, s_obj, atol=tol, rtol=0):
+                    is_dup = True
+                    break
+            if not is_dup:
+                unique.append(sol)
+                seen_objs.append(obj)
+        return unique
 
     def inject_solution(self, stagnation_count: int = 0) -> Optional[Solution]:
         """
@@ -445,7 +497,8 @@ class iNSSSO:
     # ----- SSO update (Enhanced Eq 2) — with Lévy flight & DE perturbation ---
     def update_solution(self, xi: Solution, gbest: Solution,
                         xr1: Optional[Solution] = None,
-                        xr2: Optional[Solution] = None) -> Solution:
+                        xr2: Optional[Solution] = None,
+                        cg_override: Optional[float] = None) -> Solution:
         """
         Enhanced SSO update with three exploration mechanisms:
 
@@ -467,8 +520,8 @@ class iNSSSO:
         nvar = xi.nvar
         rho = np.random.rand(nvar)
 
-        # Standard SSO: copy from gBest
-        new_keys = np.where(rho <= self.cg, gbest.keys, xi.keys)
+        cg = cg_override if cg_override is not None else self.cg
+        new_keys = np.where(rho <= cg, gbest.keys, xi.keys)
 
         # Lévy flight exploration (replaces pure random for ρ > c_w)
         c_l = self.cw + (1.0 - self.cw) * 0.6  # 60% of exploration band
@@ -568,6 +621,50 @@ class iNSSSO:
         self.parser.parse(result)
         return result
 
+    # ----- diverse gbest per reference direction -----------------------------
+    def _select_diverse_gbest(
+        self, obj_matrix: np.ndarray, pf_indices: List[int],
+    ) -> np.ndarray:
+        """
+        Assign a different gbest to each individual using reference directions.
+
+        Each individual i is associated with ref_dir[i % D]. The gbest for
+        that individual is the PF solution closest to that reference direction.
+        This prevents all individuals from converging to the same gbest.
+        """
+        n = len(self.population)
+        n_dirs = len(self.ref_dirs)
+        gbest_map = np.zeros(n, dtype=int)
+
+        if len(pf_indices) == 0:
+            return gbest_map
+
+        pf_obj = obj_matrix[pf_indices]
+        ideal = obj_matrix.min(axis=0)
+        nadir = obj_matrix.max(axis=0)
+        ranges = nadir - ideal
+        ranges = np.where(ranges < 1e-10, 1.0, ranges)
+        pf_norm = (pf_obj - ideal) / ranges
+
+        # For each reference direction, find the closest PF solution
+        dir_to_pf = np.zeros(n_dirs, dtype=int)
+        for j in range(n_dirs):
+            d = self.ref_dirs[j]
+            dd = np.dot(d, d)
+            if dd < 1e-15:
+                dir_to_pf[j] = pf_indices[0]
+                continue
+            proj_scalars = pf_norm @ d / dd
+            projs = proj_scalars[:, np.newaxis] * d[np.newaxis, :]
+            perp_dists = np.linalg.norm(pf_norm - projs, axis=1)
+            dir_to_pf[j] = pf_indices[np.argmin(perp_dists)]
+
+        for i in range(n):
+            ref_idx = i % n_dirs
+            gbest_map[i] = dir_to_pf[ref_idx]
+
+        return gbest_map
+
     # ----- adaptive parameter control ----------------------------------------
     def _adapt_parameters(self, gen: int, progress: float) -> None:
         """Adapt ABS probability based on search progress and stagnation."""
@@ -647,13 +744,22 @@ class iNSSSO:
             self._adapt_parameters(generation, progress)
             self.abs_search.n_abs = self.n_abs
 
+            # ── Pre-compute diverse gbest per individual ──
+            diverse_gb = self._select_diverse_gbest(obj_matrix, pf_indices)
+
+            # Adaptive cg: lower early on for exploration, higher later
+            cg_effective = self.cg * (0.7 + 0.3 * progress)
+
             # ── Generate offspring ──
             offspring: List[Solution] = []
             for i in range(self.n_sol):
                 if np.random.random() < self.n_abs:
                     yi = self.abs_search.apply(self.population[i])
                 else:
-                    if self.pref is not None:
+                    # 70% diverse gbest, 30% ASF-best (intensification)
+                    if np.random.random() < 0.7:
+                        gb_idx = diverse_gb[i]
+                    elif self.pref is not None:
                         gb_idx = select_gbest_asf(
                             obj_matrix, self.pref, pf_indices
                         )
@@ -670,7 +776,8 @@ class iNSSSO:
                     xr2 = self.population[r_indices[1]]
 
                     yi = self.update_solution(
-                        self.population[i], gbest, xr1=xr1, xr2=xr2
+                        self.population[i], gbest, xr1=xr1, xr2=xr2,
+                        cg_override=cg_effective,
                     )
 
                     if self._stagnation_count > 3 and np.random.random() < self.mutation_rate:

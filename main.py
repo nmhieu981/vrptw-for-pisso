@@ -30,7 +30,7 @@ from algorithm.inssso import iNSSSO
 from algorithm.nssso import NSSSO
 from benchmark.metrics import PerformanceMetrics
 from benchmark.runner import ExperimentRunner
-from visualization.pareto_plot import plot_pareto_2d
+from visualization.pareto_plot import plot_pareto_2d, plot_pareto_parallel
 from visualization.convergence_plot import plot_convergence
 from visualization.route_visualizer import plot_routes
 
@@ -174,7 +174,9 @@ def mode_single(args, config):
         os.makedirs(results_dir, exist_ok=True)
 
         plot_pareto_2d({"iNSSSO": objs}, instance.name, save_dir=results_dir)
+        plot_pareto_parallel({"iNSSSO": objs}, instance.name, save_dir=results_dir)
         print(f"\n  Pareto plot saved to {results_dir}/pareto_{instance.name}.png")
+        print(f"  Parallel coords saved to {results_dir}/parallel_{instance.name}.png")
 
         # Plot best route
         best_sol = min(pareto, key=lambda s: s.objectives[1])  # best by Z2
