@@ -157,8 +157,14 @@ def mode_single(args, config):
                   f"Z3={obj[2]:.4f} Z4={obj[3]:.4f} Z5={obj[4]:.2f}  "
                   f"ASF={pref.asf(obj):.6f}")
 
-        print(f"\n  Pareto Front objectives (Z1, Z2, Z3, Z4, Z5):")
-        for i, s in enumerate(pareto[:10]):
+        top_n = min(10, len(pareto))
+        top_by_distance = sorted(
+            pareto,
+            key=lambda s: (s.objectives[1], s.objectives[0], s.objectives[2]),
+        )[:top_n]
+
+        print(f"\n  Top {top_n} solutions by lowest Z2 (total distance):")
+        for i, s in enumerate(top_by_distance):
             o = s.objectives
             asf_str = ""
             if pref is not None:
@@ -166,8 +172,6 @@ def mode_single(args, config):
             print(f"    [{i+1}] Z1={int(o[0])} Z2={o[1]:.2f} Z3={o[2]:.4f} "
                   f"Z4={o[3]:.4f} Z5={o[4]:.2f}  "
                   f"unserved={s.restcus}{asf_str}")
-        if len(pareto) > 10:
-            print(f"    ... and {len(pareto)-10} more")
 
         # Plot
         results_dir = config.get("experiment", {}).get("results_dir", "results")
@@ -176,10 +180,22 @@ def mode_single(args, config):
         plot_pareto_2d({"iNSSSO": objs}, instance.name, save_dir=results_dir)
         print(f"\n  Pareto plot saved to {results_dir}/pareto_{instance.name}.png")
 
-        # Plot best route
-        best_sol = min(pareto, key=lambda s: s.objectives[1])  # best by Z2
-        plot_routes(best_sol, instance, save_dir=results_dir)
-        print(f"  Route plot saved to {results_dir}/routes_{instance.name}.png")
+        # Plot routes for top solutions by lowest Z2 (same order as listing above)
+        for i, sol in enumerate(top_by_distance):
+            rank = i + 1
+            z2 = sol.objectives[1]
+            fn = f"routes_{instance.name}_distRank{rank:02d}.png"
+            plot_routes(
+                sol,
+                instance,
+                save_dir=results_dir,
+                filename=fn,
+                title=f"Routes — {instance.name} (#{rank} by Z2={z2:.2f})",
+            )
+        print(
+            f"  Route plots saved to "
+            f"{results_dir}/routes_{instance.name}_distRank01..{top_n:02d}.png"
+        )
 
         # Convergence
         conv_data = {"iNSSSO": [info["convergence"]]}
