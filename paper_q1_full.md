@@ -1072,91 +1072,120 @@ Algorithm 1: iNSSSO — Preference-Based improved Non-dominated Sorting
 Input:  Instance I, n_sol, t_run, preference (g, w, δ)
 Output: Pareto front approximation PF_approx
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- // ===== PHASE 1: INITIALIZATION =====
- 1: P ← MultiStartInit(I, n_sol)         // Algorithm 5
- 2: Evaluate all x ∈ P: f(x) = (Z₁,...,Z₅)
- 3: ObjectiveNormalizer.init(f(P))        // Eq. 58-60
- 4: AutoCalibratePreference(P, g, w)      // Eq. 38
- 5: DualArchive.init()
- 6: DualArchive.update(P)                 // Algorithm 4
- 7: ref_dirs ← PreferenceBiasedDirs(w)    // Eq. 30-31
+ // ===== PHASE 1: INITIALIZATION (§4) =====
+ 1: P ← MultiStartInit(I, n_sol)         // Algorithm 5 (§4.2–4.4)
+                                          // H1: CW savings Eq.18
+                                          // H2: Solomon I1   Eq.19
+                                          // H3: Greedy NN
+ 2: Evaluate all x ∈ P: f(x) = (Z₁,...,Z₅)  // 5 objectives (§3.2, Eq.1-6)
+                                              // + penalty    (§3.4, Eq.13)
+ 3: ObjectiveNormalizer.init(f(P))        // Adaptive norm  (§10.1, Eq.58-60)
+ 4: AutoCalibratePreference(P, g, w)      // Auto ref point (§6.4, Eq.38)
+ 5: DualArchive.init()                    // A_conv + A_div (§9)
+ 6: DualArchive.update(P)                 // ε-dom + ASF    (§9.3, Eq.54-55)
+                                          // Pareto + SDE   (§9.4, Eq.56)
+ 7: ref_dirs ← PreferenceBiasedDirs(w)    // Das-Dennis + bias (§5.3, Eq.28-31)
+                                          // 70% ROI / 30% uniform
  8: t ← 0; stagnation ← 0
 
  // ===== PHASE 2: MAIN EVOLUTIONARY LOOP =====
  9: while elapsed_time < t_run do
 
-10:     // --- Step A: Ranking & Density ---
-11:     (ranks, sde) ← AssignRankAndSDE(f(P))  // NDS + SDE
+10:     // --- Step A: Ranking & Density (§5) ---
+11:     (ranks, sde) ← AssignRankAndSDE(f(P))
+                          // NDS: Pareto dominance   (§5.1, Eq.20-23)
+                          // SDE: Shift-based density (§5.2, Eq.24-27)
+                          // Niching: ref dir assoc   (§5.3, Eq.32)
 
-12:     // --- Step B: Track convergence ---
+12:     // --- Step B: Track convergence (§6.1, §10.2) ---
 13:     best_asf_t ← min_{x: rank(x)=0} ASF(x)
-14:     stagnation ← UpdateStagnation(best_asf_t)  // Eq. 61
+                          // ASF_aug on front-0       (§6.1, Eq.33-34)
+14:     stagnation ← UpdateStagnation(best_asf_t)
+                          // Stagnation counter       (§10.2, Eq.61)
 
-15:     // --- Step C: Adaptive parameters ---
-16:     n_abs ← AdaptALNS(stagnation)     // Eq. 62
-17:     μ ← AdaptMutation(t, t_run)       // Eq. 63
+15:     // --- Step C: Adaptive parameters (§10) ---
+16:     n_abs ← AdaptALNS(stagnation)     // ALNS prob adapt (§10.3, Eq.62)
+17:     μ ← AdaptMutation(t, t_run)       // Mutation adapt   (§10.4, Eq.63)
 
 18:     // --- Step D: Generate offspring ---
 19:     Q ← ∅
 20:     for i = 1 to n_sol do
 21:         if U(0,1) < n_abs then
-22:             // ALNS path
-23:             y_i ← ALNS.apply(P[i])     // Algorithm 3
-24:             y_i ← Encode(y_i)
+22:             // === ALNS path (§8) ===
+23:             y_i ← ALNS.apply(P[i])     // Algorithm 3 (§8.6)
+                          // Destroy: D1-D5 roulette  (§8.3, Eq.46-48)
+                          // Repair:  R1-R4 roulette  (§8.4, Eq.49-51)
+                          // SA acceptance            (§8.5, Eq.52-53)
+                          // Score update             (§8.2, Eq.44-45)
+24:             y_i ← Encode(y_i)          // Routes → random-key (§4.1, Eq.16)
 25:         else
-26:             // SSO path
+26:             // === SSO path (§7) ===
 27:             gbest ← SelectGBest_ASF(PF₀, preference)
+                          // Tournament via ASF       (§6.1, Eq.33-34)
+                          // R-dominance on front-0   (§6.3, Eq.37)
 28:             r1, r2 ← SelectRandom(P, exclude=i)
-29:             y_i ← EnhancedSSO(P[i], gbest, r1, r2)  // Algorithm 2
+                          // DE donors                (§7.4, Eq.43)
+29:             y_i ← EnhancedSSO(P[i], gbest, r1, r2)
+                          // Algorithm 2              (§7.6)
+                          // 4 branches: exploit / conserve /
+                          //   Lévy flight (§7.3, Eq.41-42) /
+                          //   DE/rand/1  (§7.4, Eq.43)
 30:         end if
 31:
-32:         // Polynomial mutation when stagnating
+32:         // Polynomial mutation when stagnating (§10.5)
 33:         if stagnation > 3 and U(0,1) < μ then
-34:             y_i ← PolynomialMutation(y_i)  // Eq. 64-65
+34:             y_i ← PolynomialMutation(y_i)  // (§10.5, Eq.64-65)
 35:         end if
 36:
-37:         // Decode, evaluate
-38:         y_i.routes ← Decode(y_i)       // Eq. 16-17
-39:         y_i.objectives ← Evaluate(y_i)  // Eq. 1-5, 13
+37:         // Decode & evaluate (§4.1, §3)
+38:         y_i.routes ← Decode(y_i)       // Random-key decode (§4.1, Eq.16-17)
+39:         y_i.objectives ← Evaluate(y_i)  // Z₁-Z₅ + penalty (§3.2-3.4, Eq.1-13)
 40:
-41:         // Local search for elite
+41:         // Local search for elite (§4.3)
 42:         if y_i.feasible and rank(y_i) = 0 then
-43:             if U(0,1) < 0.10 then
-44:                 y_i ← LocalSearch(y_i)  // 2-opt + merge
-45:             end if
-46:         else if U(0,1) < 0.03 then
+43:             if U(0,1) < 0.10 then       // 10% elite LS
+44:                 y_i ← LocalSearch(y_i)  // 2-opt, or-opt, relocate, swap,
+45:             end if                       // cross-exchange, merge (§4.3)
+46:         else if U(0,1) < 0.03 then      // 3% non-elite LS
 47:             y_i ← LocalSearch(y_i)
 48:         end if
 49:
 50:         Q ← Q ∪ {y_i}
 51:     end for
 
-52:     // --- Step E: Archive update ---
-53:     DualArchive.update(Q)              // Algorithm 4
+52:     // --- Step E: Archive update (§9) ---
+53:     DualArchive.update(Q)              // Algorithm 4 (§9.7)
+                          // A_conv: ε-box + ASF tie-break (§9.3, Eq.54-55)
+                          // A_div:  Pareto + SDE prune    (§9.4, Eq.56)
 
-54:     // --- Step F: Archive injection ---
+54:     // --- Step F: Archive injection (§9.5) ---
 55:     if DualArchive.non_empty() then
-56:         p_conv ← Sigmoid(stagnation)   // Eq. 57
+56:         p_conv ← Sigmoid(stagnation)   // Adaptive inject (§9.5, Eq.57)
+                          // s=0 → p=0.12 (diversity)
+                          // s=20 → p=0.88 (convergence)
 57:         if U(0,1) < p_conv then
-58:             injected ← sample(A_conv)
+58:             injected ← sample(A_conv)  // Convergence archive (§9.2)
 59:         else
-60:             injected ← sample(A_div)
+60:             injected ← sample(A_div)   // Diversity archive   (§9.2)
 61:         end if
 62:         Q ← Q ∪ {injected}
 63:     end if
 
-64:     // --- Step G: Environmental selection ---
+64:     // --- Step G: Environmental selection (§5.4) ---
 65:     merged ← P ∪ Q
 66:     P ← SelectNDS_SDE_Niching(merged, n_sol, ref_dirs)
-                                            // Algorithm 6
-67:     ObjectiveNormalizer.update(f(P))    // Eq. 58-60
+                          // Algorithm 6              (§5.4)
+                          // Phase 1: NDS fronts      (§5.1, Eq.20-23)
+                          // Phase 2: Fill fronts
+                          // Phase 3: Niching + SDE   (§5.2-5.3, Eq.24-32)
+67:     ObjectiveNormalizer.update(f(P))    // EMA nadir update (§10.1, Eq.58-60)
 68:     t ← t + 1
 69: end while
 
  // ===== PHASE 3: FINALIZATION =====
-70: AssignRankAndSDE(f(P))
-71: DualArchive.update(P)
-72: PF_approx ← DualArchive.get_combined()
+70: AssignRankAndSDE(f(P))                 // Final ranking (§5.1-5.2)
+71: DualArchive.update(P)                  // Final archive  (§9)
+72: PF_approx ← DualArchive.get_combined() // Merge A_conv ∪ A_div
 73: return PF_approx
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
